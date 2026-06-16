@@ -22,8 +22,6 @@ public class TestResponse {
 
     private int openQuestionsCount;
 
-    private int termDefinitionQuestionsCount;
-
     private double passingPercentage;
 
 }

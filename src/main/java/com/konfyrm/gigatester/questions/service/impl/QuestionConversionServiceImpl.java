@@ -1,7 +1,10 @@
 package com.konfyrm.gigatester.questions.service.impl;
 
 import com.konfyrm.gigatester.common.domain.TesterEntityType;
-import com.konfyrm.gigatester.questions.domain.converter.impl.*;
+import com.konfyrm.gigatester.questions.domain.converter.impl.AbstractQuestionConverter;
+import com.konfyrm.gigatester.questions.domain.converter.impl.ClosedQuestionConverter;
+import com.konfyrm.gigatester.questions.domain.converter.impl.OpenQuestionConverter;
+import com.konfyrm.gigatester.questions.domain.converter.impl.StatementQuestionConverter;
 import com.konfyrm.gigatester.questions.domain.dto.QuestionDto;
 import com.konfyrm.gigatester.questions.domain.dto.enums.QuestionType;
 import com.konfyrm.gigatester.questions.domain.dto.responses.QuestionSummaryResponse;
@@ -23,8 +26,7 @@ public class QuestionConversionServiceImpl implements QuestionMappingService {
     private static final Map<TesterEntityType, QuestionType> ENTITY_TO_QUESTION_TYPE = Map.of(
             TesterEntityType.CLOSED_QUESTION, QuestionType.CLOSED,
             TesterEntityType.OPEN_QUESTION, QuestionType.OPEN,
-            TesterEntityType.STATEMENT_QUESTION, QuestionType.STATEMENT,
-            TesterEntityType.TERM_DEFINITION_QUESTION, QuestionType.TERM_DEFINITION
+            TesterEntityType.STATEMENT_QUESTION, QuestionType.STATEMENT
     );
 
     private final Map<QuestionType, AbstractQuestionConverter<? extends QuestionDto, ?>> questionTypeToMapper;
@@ -33,19 +35,16 @@ public class QuestionConversionServiceImpl implements QuestionMappingService {
     @Autowired
     public QuestionConversionServiceImpl(
             ClosedQuestionConverter closedQuestionMapper,
-            TermDefinitionQuestionConverter termDefinitionQuestionMapper,
             OpenQuestionConverter openQuestionConverter,
             StatementQuestionConverter statementQuestionConverter
     ) {
         questionTypeToMapper = Map.of(
                 QuestionType.CLOSED, closedQuestionMapper,
-                QuestionType.TERM_DEFINITION, termDefinitionQuestionMapper,
                 QuestionType.OPEN, openQuestionConverter,
                 QuestionType.STATEMENT, statementQuestionConverter
         );
         entityTypeToMapper = Map.of(
                 TesterEntityType.CLOSED_QUESTION, closedQuestionMapper,
-                TesterEntityType.TERM_DEFINITION_QUESTION, termDefinitionQuestionMapper,
                 TesterEntityType.OPEN_QUESTION, openQuestionConverter,
                 TesterEntityType.STATEMENT_QUESTION, statementQuestionConverter
         );

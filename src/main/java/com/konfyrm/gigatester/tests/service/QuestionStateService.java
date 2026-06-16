@@ -20,7 +20,6 @@ public class QuestionStateService {
     private static final Map<QuestionType, QuestionChecker> QUESTION_CHECKERS = Map.of(
             QuestionType.CLOSED, new ClosedQuestionChecker(),
             QuestionType.OPEN, new OpenQuestionChecker(),
-            QuestionType.TERM_DEFINITION, new TermDefinitionQuestionChecker(),
             QuestionType.STATEMENT, new StatementQuestionChecker()
     );
 

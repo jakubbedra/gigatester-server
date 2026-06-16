@@ -20,8 +20,6 @@ public class TestRequest {
 
     private int openQuestionsCount;
 
-    private int termDefinitionQuestionsCount;
-
     private double passingPercentage;
 
 }

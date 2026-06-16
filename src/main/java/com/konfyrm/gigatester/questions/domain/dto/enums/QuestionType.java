@@ -4,6 +4,5 @@ public enum QuestionType {
     CLOSED,
     OPEN,
     STATEMENT,
-    TERM_DEFINITION,
     QUESTION_GROUP
 }

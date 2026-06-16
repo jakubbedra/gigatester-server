@@ -38,7 +38,6 @@ public class TestConverter {
                 .questions(test.getQuestions().stream().map(Question::getId).toList())
                 .closedQuestionsCount(test.getClosedQuestionsCount())
                 .openQuestionsCount(test.getOpenQuestionsCount())
-                .termDefinitionQuestionsCount(test.getTermDefinitionQuestionsCount())
                 .passingPercentage(test.getPassingPercentage())
                 .build();
     }

@@ -21,7 +21,6 @@ public class TestStateConverter {
                 ).toList())
                 .closedQuestionsCount(testState.getClosedQuestionsCount())
                 .openQuestionsCount(testState.getOpenQuestionsCount())
-                .termDefinitionQuestionsCount(testState.getTermDefinitionQuestionsCount())
                 .currentQuestionsCount(getCurrentQuestionsCount(testState))
                 .currentQuestionIndex(testState.getCurrentQuestionIndex())
                 .mode(TestModeToDtoConverter.toDto(testState.getMode()))
@@ -35,7 +34,7 @@ public class TestStateConverter {
 
     private int getCurrentQuestionsCount(TestState testState) {
         if (testState.getMode() == TestMode.EXAM) {
-            return testState.getClosedQuestionsCount() + testState.getOpenQuestionsCount() + testState.getTermDefinitionQuestionsCount();
+            return testState.getClosedQuestionsCount() + testState.getOpenQuestionsCount();
         }
         return testState.getQuestions().size();
     }

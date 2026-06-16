@@ -20,7 +20,7 @@ public class QuestionServiceImpl implements QuestionService {
     public static final String QUALIFIER = "questionServiceImpl";
 
     private static final Set<TesterEntityType> SUPPORTED_TYPES = Set.of(
-            TesterEntityType.OPEN_QUESTION, TesterEntityType.CLOSED_QUESTION, TesterEntityType.TERM_DEFINITION_QUESTION
+            TesterEntityType.OPEN_QUESTION, TesterEntityType.CLOSED_QUESTION
     );
 
     private final QuestionRepository questionRepository;

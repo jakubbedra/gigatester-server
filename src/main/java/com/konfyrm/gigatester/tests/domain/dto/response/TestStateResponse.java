@@ -26,8 +26,6 @@ public class TestStateResponse {
 
     private int openQuestionsCount;
 
-    private int termDefinitionQuestionsCount;
-
     private int currentQuestionsCount;
 
     private int currentQuestionIndex;

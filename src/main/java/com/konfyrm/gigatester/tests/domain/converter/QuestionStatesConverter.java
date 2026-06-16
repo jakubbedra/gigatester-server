@@ -30,20 +30,17 @@ public class QuestionStatesConverter {
     public QuestionStatesConverter(
             @Qualifier(OpenQuestionStateConverter.QUALIFIER) QuestionStateConverter openQuestionStateConverter,
             @Qualifier(ClosedQuestionStateConverter.QUALIFIER) QuestionStateConverter closedQuestionStateConverter,
-            @Qualifier(TermDefinitionQuestionStateConverter.QUALIFIER) QuestionStateConverter termDefinitionQuestionStateConverter,
             @Qualifier(StatementQuestionStateConverter.QUALIFIER) StatementQuestionStateConverter statementQuestionStateConverter,
             QuestionRepository questionRepository
     ) {
         questionTypeToConverter = Map.of(
                 QuestionType.OPEN, openQuestionStateConverter,
                 QuestionType.CLOSED, closedQuestionStateConverter,
-                QuestionType.TERM_DEFINITION, termDefinitionQuestionStateConverter,
                 QuestionType.STATEMENT, statementQuestionStateConverter
         );
         entityTypeToConverter = Map.of(
                 TesterEntityType.OPEN_QUESTION, openQuestionStateConverter,
                 TesterEntityType.CLOSED_QUESTION, closedQuestionStateConverter,
-                TesterEntityType.TERM_DEFINITION_QUESTION, termDefinitionQuestionStateConverter,
                 TesterEntityType.STATEMENT_QUESTION, statementQuestionStateConverter
         );
         this.questionRepository = questionRepository;

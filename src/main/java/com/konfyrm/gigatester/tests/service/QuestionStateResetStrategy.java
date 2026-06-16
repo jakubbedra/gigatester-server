@@ -1,9 +1,11 @@
 package com.konfyrm.gigatester.tests.service;
 
 import com.konfyrm.gigatester.common.domain.TesterEntityType;
-import com.konfyrm.gigatester.tests.domain.entity.*;
+import com.konfyrm.gigatester.tests.domain.entity.ClosedQuestionState;
+import com.konfyrm.gigatester.tests.domain.entity.OpenQuestionState;
+import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
+import com.konfyrm.gigatester.tests.domain.entity.StatementQuestionState;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -29,16 +31,7 @@ public enum QuestionStateResetStrategy {
             throw new IllegalArgumentException("Question with id: " + state.getId() + " is not an OpenQuestion.");
         }
     },
-    TERM_DEFINITION {
-        @Override
-        public void resetQuestionState(QuestionState state) {
-            if (state instanceof TermDefinitionQuestionState termDefinitionQuestion) {
-                termDefinitionQuestion.setTermDefinitions(new ArrayList<>());
-                return;
-            }
-            throw new IllegalArgumentException("QuestionState with id: " + state.getId() + " is not a TermDefinitionQuestionState.");
-        }
-    }, STATEMENT {
+    STATEMENT {
         @Override
         protected void resetQuestionState(QuestionState state) {
             if (state instanceof StatementQuestionState statementQuestionState) {
@@ -61,7 +54,6 @@ public enum QuestionStateResetStrategy {
     private static final Map<TesterEntityType, QuestionStateResetStrategy> STRATEGIES = Map.of(
             TesterEntityType.OPEN_QUESTION, QuestionStateResetStrategy.OPEN,
             TesterEntityType.CLOSED_QUESTION, QuestionStateResetStrategy.CLOSED,
-            TesterEntityType.TERM_DEFINITION_QUESTION, QuestionStateResetStrategy.TERM_DEFINITION,
             TesterEntityType.STATEMENT_QUESTION, QuestionStateResetStrategy.STATEMENT
     );
 

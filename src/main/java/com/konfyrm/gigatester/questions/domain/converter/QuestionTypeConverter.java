@@ -11,14 +11,12 @@ public class QuestionTypeConverter {
     private static final Map<QuestionType, TesterEntityType> QUESTION_TYPE_TO_TESTER_ENTITY_TYPE = Map.of(
             QuestionType.OPEN, TesterEntityType.OPEN_QUESTION,
             QuestionType.CLOSED, TesterEntityType.CLOSED_QUESTION,
-            QuestionType.TERM_DEFINITION, TesterEntityType.TERM_DEFINITION_QUESTION,
             QuestionType.STATEMENT, TesterEntityType.STATEMENT_QUESTION
     );
 
     private static final Map<TesterEntityType, QuestionType> TESTER_ENTITY_TYPE_TO_QUESTION_TYPE = Map.of(
             TesterEntityType.OPEN_QUESTION, QuestionType.OPEN,
             TesterEntityType.CLOSED_QUESTION, QuestionType.CLOSED,
-            TesterEntityType.TERM_DEFINITION_QUESTION, QuestionType.TERM_DEFINITION,
             TesterEntityType.STATEMENT_QUESTION, QuestionType.STATEMENT
     );
 

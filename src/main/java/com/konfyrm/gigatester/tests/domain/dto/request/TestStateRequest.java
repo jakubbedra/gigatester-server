@@ -16,8 +16,6 @@ public class TestStateRequest {
 
     private int openQuestionsCount;
 
-    private int termDefinitionQuestionsCount;
-
     private int statementQuestionsCount;
 
     @Nullable

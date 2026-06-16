@@ -25,7 +25,6 @@ import java.util.UUID;
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = ClosedQuestionStateRequest.class, name = "CLOSED"),
-        @JsonSubTypes.Type(value = TermDefinitionQuestionStateRequest.class, name = "TERM_DEFINITION"),
         @JsonSubTypes.Type(value = OpenQuestionStateRequest.class, name = "OPEN"),
         @JsonSubTypes.Type(value = StatementQuestionStateRequest.class, name = "STATEMENT")
 })

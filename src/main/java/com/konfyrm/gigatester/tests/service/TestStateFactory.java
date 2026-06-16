@@ -62,23 +62,19 @@ public class TestStateFactory {
         if (state.getMode() == TestMode.LEARNING) {
             List<QuestionState> closedQuestionStates = resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION);
             List<QuestionState> openQuestionStates = resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION);
-            List<QuestionState> termDefinitionQuestionStates = resetQuestionStates(testId, TesterEntityType.TERM_DEFINITION_QUESTION);
             List<QuestionState> statementQuestionStates = resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION);
             state.getQuestions().addAll(new ArrayList<>(ImmutableList.<QuestionState>builder()
                     .addAll(closedQuestionStates)
                     .addAll(openQuestionStates)
-                    .addAll(termDefinitionQuestionStates)
                     .addAll(statementQuestionStates)
                     .build()));
             state.setOpenQuestionsCount(openQuestionStates.size());
             state.setClosedQuestionsCount(closedQuestionStates.size());
-            state.setTermDefinitionQuestionsCount(termDefinitionQuestionStates.size());
             return;
         }
         state.getQuestions().addAll(new ArrayList<>(ImmutableList.<QuestionState>builder()
                 .addAll(resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION, state.getClosedQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION, state.getOpenQuestionsCount()))
-                .addAll(resetQuestionStates(testId, TesterEntityType.TERM_DEFINITION_QUESTION, state.getTermDefinitionQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION, state.getStatementQuestionsCount()))
                 .build()));
     }
@@ -87,23 +83,19 @@ public class TestStateFactory {
         if (request.getMode() == TestModeDto.LEARNING) {
             List<QuestionState> closedQuestionStates = resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION);
             List<QuestionState> openQuestionStates = resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION);
-            List<QuestionState> termDefinitionQuestionStates = resetQuestionStates(testId, TesterEntityType.TERM_DEFINITION_QUESTION);
             List<QuestionState> statementQuestionStates = resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION);
             return builder
                     .questions(new ArrayList<>(ImmutableList.<QuestionState>builder()
                             .addAll(closedQuestionStates)
                             .addAll(openQuestionStates)
-                            .addAll(termDefinitionQuestionStates)
                             .addAll(statementQuestionStates)
                             .build()))
                     .openQuestionsCount(openQuestionStates.size())
-                    .closedQuestionsCount(closedQuestionStates.size())
-                    .termDefinitionQuestionsCount(termDefinitionQuestionStates.size());
+                    .closedQuestionsCount(closedQuestionStates.size());
         }
         return builder.questions(new ArrayList<>(ImmutableList.<QuestionState>builder()
                 .addAll(resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION, request.getClosedQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION, request.getOpenQuestionsCount()))
-                .addAll(resetQuestionStates(testId, TesterEntityType.TERM_DEFINITION_QUESTION, request.getTermDefinitionQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION, request.getStatementQuestionsCount()))
                 .build()));
     }

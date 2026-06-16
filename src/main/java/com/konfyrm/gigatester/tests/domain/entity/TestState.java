@@ -34,8 +34,6 @@ public class TestState {
 
     private int openQuestionsCount;
 
-    private int termDefinitionQuestionsCount;
-
     private Integer statementQuestionsCount;
 
     @Setter

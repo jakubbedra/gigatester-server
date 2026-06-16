@@ -42,7 +42,6 @@ public class TestService {
                 .questions(test.getQuestions())
                 .openQuestionsCount(test.getOpenQuestionsCount())
                 .closedQuestionsCount(test.getClosedQuestionsCount())
-                .termDefinitionQuestionsCount(test.getTermDefinitionQuestionsCount())
                 .passingPercentage(test.getPassingPercentage())
                 .build());
     }
