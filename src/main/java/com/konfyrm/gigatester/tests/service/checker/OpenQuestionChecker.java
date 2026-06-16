@@ -1,0 +1,73 @@
+package com.konfyrm.gigatester.tests.service.checker;
+
+import com.konfyrm.gigatester.questions.domain.dto.enums.GradingRule;
+import com.konfyrm.gigatester.questions.domain.entity.OpenQuestion;
+import com.konfyrm.gigatester.tests.domain.dto.request.OpenQuestionStateRequest;
+import com.konfyrm.gigatester.tests.domain.dto.request.QuestionStateRequest;
+import com.konfyrm.gigatester.tests.domain.entity.OpenQuestionState;
+import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
+import jakarta.annotation.Nonnull;
+
+import java.util.Objects;
+import java.util.Set;
+
+public class OpenQuestionChecker implements QuestionChecker {
+
+    private static final String WHITE_SPACE_REGEX = "\\s+";
+    private static final String PUNCTUATION_REGEX = "\\p{Punct}+";
+
+    @Nonnull
+    @Override
+    public QuestionState check(@Nonnull QuestionState state, @Nonnull QuestionStateRequest request) {
+        if (!(state instanceof OpenQuestionState openQuestionState)) {
+            throw new IllegalArgumentException("OpenQuestionChecker called for invalid state class: " + state.getClass());
+        }
+        if (!(request instanceof OpenQuestionStateRequest openQuestionStateRequest)) {
+            throw new IllegalArgumentException("OpenQuestionChecker called for invalid state request class: " + request.getClass());
+        }
+        if (!(state.getQuestion() instanceof OpenQuestion openQuestion)) {
+            throw new IllegalArgumentException("OpenQuestionChecker called for invalid question class: " + state.getQuestion().getClass());
+        }
+        openQuestionState.setGivenAnswer(openQuestionStateRequest.getGivenAnswer());
+        state.setAnswered(true);
+        Set<GradingRule> gradingRules = GradingRule.fromHash(openQuestion.getGradingRulesHash());
+        if (gradingRules.contains(GradingRule.MANUAL)) {
+            state.setScore(openQuestionStateRequest.getScoredPoints());
+            state.setWasCorrectAnswer(Objects.equals(state.getScore(), openQuestion.getPoints()));
+            return state;
+        }
+
+        String givenAnswer = openQuestionStateRequest.getGivenAnswer();
+        String correctAnswer = openQuestion.getAnswer().getText();
+        if (isCorrect(givenAnswer, correctAnswer, gradingRules)) {
+            state.setScore(openQuestion.getPoints());
+            state.setWasCorrectAnswer(true);
+            return state;
+        }
+        if (openQuestion.getAnswerVariations().stream().anyMatch(answer -> isCorrect(givenAnswer, answer.getText(), gradingRules))) {
+            state.setScore(openQuestion.getPoints());
+            state.setWasCorrectAnswer(true);
+            return state;
+        }
+        state.setScore(0.0);
+        state.setWasCorrectAnswer(false);
+        return state;
+    }
+
+    private boolean isCorrect(String givenAnswer, String correctAnswer, Set<GradingRule> gradingRules) {
+        if (gradingRules.contains(GradingRule.IGNORE_CASE)) {
+            givenAnswer = givenAnswer.toLowerCase();
+            correctAnswer = correctAnswer.toLowerCase();
+        }
+        if (gradingRules.contains(GradingRule.IGNORE_PUNCTUATION)) {
+            givenAnswer = givenAnswer.replaceAll(PUNCTUATION_REGEX, "");
+            correctAnswer = correctAnswer.replaceAll(PUNCTUATION_REGEX, "");
+        }
+        if (gradingRules.contains(GradingRule.TRIM_WHITESPACE)) {
+            givenAnswer = givenAnswer.replaceAll(WHITE_SPACE_REGEX, "");
+            correctAnswer = correctAnswer.replaceAll(WHITE_SPACE_REGEX, "");
+        }
+        return correctAnswer.equals(givenAnswer);
+    }
+
+}

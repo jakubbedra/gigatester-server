@@ -1,0 +1,79 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.7'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id("cz.habarta.typescript-generator") version "3.2.1263"
+}
+
+group = 'com.konfyrm'
+version = '0.0.1-SNAPSHOT'
+description = 'Useful tool for exam training :)'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	compileOnly 'org.projectlombok:lombok'
+	runtimeOnly 'org.postgresql:postgresql'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+	implementation 'com.google.guava:guava:33.0.0-jre'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+// === TypeScript generation tasks ===
+generateTypeScript {
+	jsonLibrary = 'jackson2'
+	classPatterns = [
+			'**.domain.dto.**'
+	]
+	excludeClassPatterns = [
+	        '**.soundcloud.domain.dto.**',
+			'**Builder**'
+	]
+	outputKind = 'module'
+	outputFile = '../gigatester-ui/src/app/models/models.d.ts'
+	mapEnum = 'asEnum'
+}
+
+tasks.register("generateApiUrls", cz.habarta.typescript.generator.gradle.GenerateTask) {
+	jsonLibrary = 'jackson2'
+	classPatterns = [
+			'**.domain.urls.client.**'
+	]
+	excludeClassPatterns = [
+			'**.soundcloud.domain.dto.**'
+	]
+	outputFile = '../gigatester-ui/src/app/models/api-urls.ts'
+	outputKind = 'module'
+	outputFileType = 'implementationFile'
+	mapEnum = 'asEnum'
+}
+
+tasks.register("generateApiUrlParams", cz.habarta.typescript.generator.gradle.GenerateTask) {
+	jsonLibrary = 'jackson2'
+	classPatterns = [
+			'**.domain.params.client.**'
+	]
+	excludeClassPatterns = [
+			'**.soundcloud.domain.dto.**'
+	]
+	outputFile = '../gigatester-ui/src/app/models/api-url-params.ts'
+	outputKind = 'module'
+	outputFileType = 'implementationFile'
+	mapEnum = 'asEnum'
+}
