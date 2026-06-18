@@ -21,6 +21,9 @@ public abstract class QuestionState {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "sequence", nullable = false, columnDefinition = "integer default 0")
+    private int sequence;
+
     @ManyToOne
     private Question question;
 

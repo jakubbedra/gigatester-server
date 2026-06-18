@@ -1,0 +1,54 @@
+package com.konfyrm.gigatester.subjects.controller;
+
+import com.konfyrm.gigatester.subjects.domain.converter.SubjectConverter;
+import com.konfyrm.gigatester.subjects.domain.dto.request.SubjectRequest;
+import com.konfyrm.gigatester.subjects.domain.entity.Subject;
+import com.konfyrm.gigatester.subjects.service.SubjectService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
+
+@RestController
+public class SubjectControllerImpl implements SubjectController {
+
+    private final SubjectService subjectService;
+
+    private final SubjectConverter subjectConverter;
+
+    public SubjectControllerImpl(SubjectService subjectService, SubjectConverter subjectConverter) {
+        this.subjectService = subjectService;
+        this.subjectConverter = subjectConverter;
+    }
+
+    @Override
+    public ResponseEntity<?> addSubject(SubjectRequest subjectRequest) {
+        Subject entity = subjectConverter.toEntity(subjectRequest);
+        Subject savedEntity = subjectService.addSubject(entity);
+        return ResponseEntity.accepted().body(savedEntity.getId());
+    }
+
+    @Override
+    public ResponseEntity<?> getSubjects() {
+        return ResponseEntity.ok(subjectConverter.toResponse(subjectService.findSubjects()));
+    }
+
+    @Override
+    public ResponseEntity<?> getSubject(UUID subjectId) {
+        return ResponseEntity.ok(subjectConverter.toResponse(subjectService.findSubject(subjectId)));
+    }
+
+    @Override
+    public ResponseEntity<?> updateSubject(UUID subjectId, SubjectRequest subjectRequest) {
+        Subject subject = subjectConverter.toEntity(subjectRequest);
+        subjectService.updateSubject(subjectId, subject);
+        return ResponseEntity.accepted().body(subjectId);
+    }
+
+    @Override
+    public ResponseEntity<?> deleteSubject(UUID subjectId) {
+        subjectService.deleteSubject(subjectId);
+        return ResponseEntity.noContent().build();
+    }
+
+}

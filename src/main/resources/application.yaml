@@ -14,3 +14,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+cloudflare:
+  r2:
+    endpoint: <endpoint>
+    access-key: <access-key>
+    secret-key: <secret-key>
+    bucket: gigatester-images-dev
+    public-url: <public-url>

@@ -68,6 +68,10 @@ public class TestStateFactory {
                     .addAll(openQuestionStates)
                     .addAll(statementQuestionStates)
                     .build()));
+            int order = 0;
+            for (QuestionState question : state.getQuestions()) {
+                question.setSequence(order++);
+            }
             state.setOpenQuestionsCount(openQuestionStates.size());
             state.setClosedQuestionsCount(closedQuestionStates.size());
             return;
@@ -77,6 +81,10 @@ public class TestStateFactory {
                 .addAll(resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION, state.getOpenQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION, state.getStatementQuestionsCount()))
                 .build()));
+        int order = 0;
+        for (QuestionState question : state.getQuestions()) {
+            question.setSequence(order++);
+        }
     }
 
     private TestState.TestStateBuilder createQuestionStates(UUID testId, TestState.TestStateBuilder builder, TestStateRequest request) {
@@ -84,20 +92,30 @@ public class TestStateFactory {
             List<QuestionState> closedQuestionStates = resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION);
             List<QuestionState> openQuestionStates = resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION);
             List<QuestionState> statementQuestionStates = resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION);
+            ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
+                    .addAll(closedQuestionStates)
+                    .addAll(openQuestionStates)
+                    .addAll(statementQuestionStates)
+                    .build());
+            int order = 0;
+            for (QuestionState question : questionStates) {
+                question.setSequence(order++);
+            }
             return builder
-                    .questions(new ArrayList<>(ImmutableList.<QuestionState>builder()
-                            .addAll(closedQuestionStates)
-                            .addAll(openQuestionStates)
-                            .addAll(statementQuestionStates)
-                            .build()))
+                    .questions(questionStates)
                     .openQuestionsCount(openQuestionStates.size())
                     .closedQuestionsCount(closedQuestionStates.size());
         }
-        return builder.questions(new ArrayList<>(ImmutableList.<QuestionState>builder()
+        ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
                 .addAll(resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION, request.getClosedQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION, request.getOpenQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION, request.getStatementQuestionsCount()))
-                .build()));
+                .build());
+        int order = 0;
+        for (QuestionState question : questionStates) {
+            question.setSequence(order++);
+        }
+        return builder.questions(questionStates);
     }
 
     private List<QuestionState> resetQuestionStates(UUID testId, TesterEntityType entityType, int count) {
