@@ -28,6 +28,9 @@ public class TestConverter {
                 .questions(request.getQuestions().stream()
                         .map(id -> questionRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Question not found for id: " + id)))
                         .toList())
+                .closedQuestionsCount(request.getClosedQuestionsCount())
+                .openQuestionsCount(request.getOpenQuestionsCount())
+                .passingPercentage(request.getPassingPercentage())
                 .build();
     }
 
