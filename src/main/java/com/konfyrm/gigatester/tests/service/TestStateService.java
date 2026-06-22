@@ -60,7 +60,6 @@ public class TestStateService {
         TestState testState = testStateOptional.get();
         TestExecutionState executionState = testState.getExecutionState();
         if (TestExecutionState.getNext(executionState) == TestExecutionState.NOT_STARTED) {
-            // todo: reset test
             testStateFactory.resetTestState(testState);
         }
         if (testState.getMode() == TestMode.LEARNING && executionState == TestExecutionState.IN_PROGRESS && isLastQuestionIndex(testState)) {

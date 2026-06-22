@@ -35,7 +35,7 @@ public class QuestionStateControllerImpl implements QuestionStateController {
         QuestionState questionState = questionStateService.getQuestionState(stateId);
         return ResponseEntity.ok(questionStatesConverter.toResponse(questionState));
     }
-//todo: also a bulk-endpoint for all at once mode (not yet available, focus on learning + one-by-one mode currently)
+
     @Override
     public ResponseEntity<?> updateQuestionState(UUID testStateId, UUID stateId, QuestionStateRequest request) {
         QuestionState answerQuestionState = questionStateService.checkQuestion(request, stateId);

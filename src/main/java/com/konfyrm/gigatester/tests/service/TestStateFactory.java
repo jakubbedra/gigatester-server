@@ -12,10 +12,7 @@ import com.konfyrm.gigatester.tests.repository.TestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 public class TestStateFactory {
@@ -66,11 +63,13 @@ public class TestStateFactory {
             List<QuestionState> closedQuestionStates = resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION);
             List<QuestionState> openQuestionStates = resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION);
             List<QuestionState> statementQuestionStates = resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION);
-            state.getQuestions().addAll(new ArrayList<>(ImmutableList.<QuestionState>builder()
+            ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
                     .addAll(closedQuestionStates)
                     .addAll(openQuestionStates)
                     .addAll(statementQuestionStates)
-                    .build()));
+                    .build());
+            Collections.shuffle(questionStates);
+            state.getQuestions().addAll(questionStates);
             int order = 0;
             for (QuestionState question : state.getQuestions()) {
                 question.setSequence(order++);
@@ -79,11 +78,13 @@ public class TestStateFactory {
             state.setClosedQuestionsCount(closedQuestionStates.size());
             return;
         }
-        state.getQuestions().addAll(new ArrayList<>(ImmutableList.<QuestionState>builder()
+        ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
                 .addAll(resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION, state.getClosedQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION, state.getOpenQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION, state.getStatementQuestionsCount() != null ? state.getStatementQuestionsCount() : 0))
-                .build()));
+                .build());
+        Collections.shuffle(questionStates);
+        state.getQuestions().addAll(questionStates);
         int order = 0;
         for (QuestionState question : state.getQuestions()) {
             question.setSequence(order++);
@@ -100,6 +101,7 @@ public class TestStateFactory {
                     .addAll(openQuestionStates)
                     .addAll(statementQuestionStates)
                     .build());
+            Collections.shuffle(questionStates);
             int order = 0;
             for (QuestionState question : questionStates) {
                 question.setSequence(order++);
@@ -114,6 +116,7 @@ public class TestStateFactory {
                 .addAll(resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION, request.getOpenQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION, request.getStatementQuestionsCount()))
                 .build());
+        Collections.shuffle(questionStates);
         int order = 0;
         for (QuestionState question : questionStates) {
             question.setSequence(order++);
