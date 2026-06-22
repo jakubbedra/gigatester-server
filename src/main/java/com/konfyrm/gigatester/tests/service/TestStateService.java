@@ -100,14 +100,9 @@ public class TestStateService {
             } else if (navigateActionDto == NavigateActionDto.PREVIOUS) {
                 testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() - 1);
             } else if (navigateActionDto == NavigateActionDto.FINISH) {
-                // TODO: check and grade all questions!!!!!!
-                // unanswered open questions which are graded in MANUAL mode should not be set to score 0,
-                // instead they should be skipped IF TestExecutionState == IN_PROGRESS
-                // grade questions
                 testState.getQuestions().stream()
                         .filter(q -> isUnansweredQuestion(q, testState.getExecutionState()))
                         .forEach(q -> questionStateService.checkQuestion(q, true));
-                // todo: separate state handlers for exam and learning?
                 testState.getQuestions().stream()
                         .filter(q -> isUnansweredQuestion(q, testState.getExecutionState()))
                         .forEach(q -> {
@@ -115,8 +110,6 @@ public class TestStateService {
                             q.setWasCorrectAnswer(false);
                             q.setScore(0.0);
                         });
-
-                // todo: test open questions !!!!
 
                 testState.setCurrentQuestionIndex(0);
                 if (testState.getExecutionState() == TestExecutionState.IN_PROGRESS) {
@@ -138,22 +131,6 @@ public class TestStateService {
                     return false;
                 }
             } else {
-
-
-
-
-
-                // todo: strict open questions do not work as intended
-                // todo; they somehow end up with 0 points and wasCorrectAnswer: false...
-                // todo: whereas closed questions DO not
-
-
-
-
-
-
-
-
                 throw new IllegalStateException("Open question state does not contain an open question.");
             }
         }
