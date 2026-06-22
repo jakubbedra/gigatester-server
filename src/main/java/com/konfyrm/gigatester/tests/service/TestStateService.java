@@ -81,8 +81,19 @@ public class TestStateService {
                 testState.setCurrentQuestionIndex(0);
                 testState.setExecutionState(TestExecutionState.FINISHED);
             }
+        } else if (executionState == TestExecutionState.IN_PROGRESS && testState.getMode() == TestMode.LEARNING && navigateActionDto == NavigateActionDto.FINISH) {
+            if (notAllQuestionsAnsweredCorrectly(testState)) {
+                testState.getQuestions().stream()
+                        .filter(q -> !q.isWasCorrectAnswer())
+                        .forEach(q -> QuestionStateResetStrategy.getStrategy(q.getQuestion().getType()).reset(q));
+                testState.getQuestions().removeIf(QuestionState::isAnswered);
+                testState.setCurrentQuestionIndex(0);
+            } else {
+                testState.setCurrentQuestionIndex(0);
+                testState.setExecutionState(TestExecutionState.FINISHED);
+            }
         } else if (executionState == TestExecutionState.IN_PROGRESS && testState.getMode() == TestMode.LEARNING) {
-            testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() + 1);//todo: either + 1 or - 1?
+            testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() + 1);
         } else if ((executionState == TestExecutionState.IN_PROGRESS || executionState == TestExecutionState.IN_REVIEW) && testState.getMode() == TestMode.EXAM) {
             if (navigateActionDto == NavigateActionDto.NEXT) {
                 testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() + 1);
