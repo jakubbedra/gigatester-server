@@ -1,4 +1,4 @@
-package com.konfyrm.gigatester.subjects.domain.dto.response;
+package com.konfyrm.gigatester.crosswords.domain.dto.response;
 
 import lombok.*;
 
@@ -10,14 +10,12 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SubjectResponse {
+public class CrosswordResponse {
 
     private UUID id;
 
     private String name;
 
-    private List<UUID> tests;
-
-    private List<UUID> crosswords;
+    private List<CrosswordTermResponse> terms;
 
 }

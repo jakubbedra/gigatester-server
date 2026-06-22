@@ -16,4 +16,6 @@ public class SubjectRequest {
 
     private List<UUID> tests;
 
+    private List<UUID> crosswords;
+
 }

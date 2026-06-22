@@ -2,12 +2,12 @@ package com.konfyrm.gigatester.subjects.service;
 
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -31,16 +31,13 @@ public class SubjectService {
         return subjectRepository.findById(subjectId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject with id: " + subjectId + " not found."));
     }
 
+    @Transactional
     public void updateSubject(UUID subjectId, Subject subject) {
-        Optional<Subject> subjectOptional = subjectRepository.findById(subjectId);
-        if (subjectOptional.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject with id: " + subjectId + " not found.");
-        }
-        Subject currentSubject = subjectOptional.get();
-        subjectRepository.save(currentSubject.toBuilder()
-                .name(subject.getName())
-                .tests(subject.getTests())
-                .build());
+        Subject existing = subjectRepository.findById(subjectId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject with id: " + subjectId + " not found."));
+        existing.setName(subject.getName());
+        existing.setTests(subject.getTests());
+        existing.setCrosswords(subject.getCrosswords());
     }
 
     public void deleteSubject(UUID subjectId) {

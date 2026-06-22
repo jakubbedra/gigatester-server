@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.subjects.domain.entity;
 
+import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,5 +25,8 @@ public class Subject {
 
     @ManyToMany
     private List<Test> tests;
+
+    @ManyToMany
+    private List<Crossword> crosswords;
 
 }
