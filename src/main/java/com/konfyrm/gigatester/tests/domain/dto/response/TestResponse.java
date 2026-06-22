@@ -22,6 +22,10 @@ public class TestResponse {
 
     private int openQuestionsCount;
 
+    private int storedClosedQuestionsCount;
+
+    private int storedOpenQuestionsCount;
+
     private double passingPercentage;
 
 }

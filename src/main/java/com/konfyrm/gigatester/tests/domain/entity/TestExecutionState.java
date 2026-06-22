@@ -5,6 +5,7 @@ import java.util.Map;
 public enum TestExecutionState {
     NOT_STARTED,
     IN_PROGRESS,
+    IN_REVIEW,
     FINISHED;
 
     private static final Map<TestExecutionState, TestExecutionState> NEXT_STATE = Map.of(

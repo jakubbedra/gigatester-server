@@ -1,6 +1,9 @@
 package com.konfyrm.gigatester.tests.service;
 
+import com.konfyrm.gigatester.common.domain.TesterEntityType;
+import com.konfyrm.gigatester.questions.domain.dto.enums.GradingRule;
 import com.konfyrm.gigatester.questions.domain.dto.enums.QuestionType;
+import com.konfyrm.gigatester.questions.domain.entity.OpenQuestion;
 import com.konfyrm.gigatester.tests.service.checker.*;
 import com.konfyrm.gigatester.tests.domain.dto.request.QuestionStateRequest;
 import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
@@ -23,6 +26,12 @@ public class QuestionStateService {
             QuestionType.STATEMENT, new StatementQuestionChecker()
     );
 
+    private static final Map<TesterEntityType, QuestionChecker> ENTITY_TYPE_TO_QUESTION_CHECKERS = Map.of(
+            TesterEntityType.CLOSED_QUESTION, new ClosedQuestionChecker(),
+            TesterEntityType.OPEN_QUESTION, new OpenQuestionChecker(),
+            TesterEntityType.STATEMENT_QUESTION, new StatementQuestionChecker()
+    );
+
     private final QuestionStateRepository questionStateRepository;
 
     @Autowired
@@ -33,10 +42,16 @@ public class QuestionStateService {
     @Nonnull
     public QuestionState checkQuestion(@Nonnull QuestionStateRequest request, @Nonnull UUID stateId) {
         QuestionState questionState = getQuestionState(stateId);
-        if (questionState.isAnswered()) {
+        QuestionChecker questionChecker = QUESTION_CHECKERS.get(request.getQuestionType());
+        if (questionChecker.hasConflict(questionState, request)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Question already answered");
         }
-        return QUESTION_CHECKERS.get(request.getQuestionType()).check(questionState, request);
+        return questionChecker.check(questionState, request);
+    }
+
+    @Nonnull
+    public QuestionState checkQuestion(@Nonnull QuestionState questionState, boolean answered) {
+        return ENTITY_TYPE_TO_QUESTION_CHECKERS.get(questionState.getQuestion().getType()).check(questionState, answered);
     }
 
     public QuestionState getQuestionState(UUID stateId) {

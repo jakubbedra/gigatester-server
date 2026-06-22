@@ -43,6 +43,9 @@ public class TestStateFactory {
                 .currentQuestionIndex(0)
                 .executionState(TestExecutionState.IN_PROGRESS)
                 .mode(TestModeToDtoConverter.toEntity(mode))
+                .closedQuestionsCount(request.getClosedQuestionsCount())
+                .openQuestionsCount(request.getOpenQuestionsCount())
+                .statementQuestionsCount(request.getStatementQuestionsCount())
                 .displayType(TestDisplayTypeToDtoConverter.toEntity(request.getDisplayType()));
         if (request.getPassingPercentage() != null) {
             builder.passingPercentage(request.getPassingPercentage());
@@ -79,7 +82,7 @@ public class TestStateFactory {
         state.getQuestions().addAll(new ArrayList<>(ImmutableList.<QuestionState>builder()
                 .addAll(resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION, state.getClosedQuestionsCount()))
                 .addAll(resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION, state.getOpenQuestionsCount()))
-                .addAll(resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION, state.getStatementQuestionsCount()))
+                .addAll(resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION, state.getStatementQuestionsCount() != null ? state.getStatementQuestionsCount() : 0))
                 .build()));
         int order = 0;
         for (QuestionState question : state.getQuestions()) {

@@ -28,14 +28,15 @@ public class TestState {
     private TesterEntityType type = TesterEntityType.TEST_STATE;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("sequence ASC")// todo : add values manually?
+    @OrderBy("sequence ASC")
     private List<QuestionState> questions;
 
     private int closedQuestionsCount;
 
     private int openQuestionsCount;
 
-    private Integer statementQuestionsCount;
+    @Builder.Default
+    private Integer statementQuestionsCount = 0;
 
     @Setter
     @Builder.Default

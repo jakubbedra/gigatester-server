@@ -48,4 +48,8 @@ public enum GradingRule {
         return hash.toString();
     }
 
+    public char getHash() {
+        return hash;
+    }
+
 }

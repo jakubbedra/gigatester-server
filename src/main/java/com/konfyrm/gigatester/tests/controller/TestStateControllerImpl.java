@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.tests.controller;
 
 import com.konfyrm.gigatester.tests.domain.converter.TestStateConverter;
 import com.konfyrm.gigatester.tests.domain.dto.request.TestStateRequest;
+import com.konfyrm.gigatester.tests.domain.dto.request.TestStateUpdateRequest;
 import com.konfyrm.gigatester.tests.domain.entity.TestState;
 import com.konfyrm.gigatester.tests.service.TestStateService;
 import org.springframework.http.ResponseEntity;
@@ -43,8 +44,8 @@ public class TestStateControllerImpl implements TestStateController {
     }
 
     @Override
-    public ResponseEntity<?> updateTestState(UUID testStateId) {
-        testStateService.updateTestExecutionState(testStateId);
+    public ResponseEntity<?> updateTestState(UUID testStateId, TestStateUpdateRequest request) {
+        testStateService.updateTestExecutionState(testStateId, request.getAction());
         return ResponseEntity.accepted().body(testStateId);
     }
 

@@ -38,6 +38,10 @@ public class TestStateResponse {
 
     private TestExecutionStateDto executionState;
 
+    private double totalScore;
+
+    private double maxScore;
+
     @Getter
     @Setter
     @Builder

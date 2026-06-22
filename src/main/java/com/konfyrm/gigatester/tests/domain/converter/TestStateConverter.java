@@ -1,7 +1,11 @@
 package com.konfyrm.gigatester.tests.domain.converter;
 
 import com.konfyrm.gigatester.questions.domain.converter.QuestionTypeConverter;
+import com.konfyrm.gigatester.questions.domain.entity.ClosedQuestion;
+import com.konfyrm.gigatester.questions.domain.entity.OpenQuestion;
+import com.konfyrm.gigatester.questions.domain.entity.StatementQuestion;
 import com.konfyrm.gigatester.tests.domain.dto.response.TestStateResponse;
+import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
 import com.konfyrm.gigatester.tests.domain.entity.TestMode;
 import com.konfyrm.gigatester.tests.domain.entity.TestState;
 import org.springframework.stereotype.Component;
@@ -29,7 +33,19 @@ public class TestStateConverter {
         if (testState.getPassingPercentage() != null) {
             builder.passingPercentage(testState.getPassingPercentage());
         }
+        // todo: something's wrong here...
+        builder.totalScore(testState.getQuestions().stream().mapToDouble(q -> q.getScore() != null ? q.getScore() : 0.0).sum());
+        builder.maxScore(testState.getQuestions().stream().mapToDouble(this::getMaxScore).sum());
         return builder.build();
+    }
+
+    private double getMaxScore(QuestionState questionState) {
+        return switch (questionState.getQuestion()) {
+            case ClosedQuestion q -> q.getPoints() != null ? q.getPoints() : 0.0;
+            case OpenQuestion q -> q.getPoints() != null ? q.getPoints() : 0.0;
+            case StatementQuestion q -> q.getPoints() != null ? q.getPoints() : 0.0;
+            default -> 0.0;
+        };
     }
 
     private int getCurrentQuestionsCount(TestState testState) {

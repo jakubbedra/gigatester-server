@@ -1,6 +1,7 @@
 package com.konfyrm.gigatester.tests.domain.converter;
 
 
+import com.konfyrm.gigatester.common.domain.TesterEntityType;
 import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.questions.repository.QuestionRepository;
 import com.konfyrm.gigatester.tests.domain.dto.request.TestRequest;
@@ -41,6 +42,8 @@ public class TestConverter {
                 .questions(test.getQuestions().stream().map(Question::getId).toList())
                 .closedQuestionsCount(test.getClosedQuestionsCount())
                 .openQuestionsCount(test.getOpenQuestionsCount())
+                .storedClosedQuestionsCount((int) test.getQuestions().stream().filter(q -> q.getType() == TesterEntityType.CLOSED_QUESTION).count())
+                .storedOpenQuestionsCount((int) test.getQuestions().stream().filter(q -> q.getType() == TesterEntityType.OPEN_QUESTION).count())
                 .passingPercentage(test.getPassingPercentage())
                 .build();
     }

@@ -24,29 +24,45 @@ public class ClosedQuestionChecker implements QuestionChecker {
         if (!(request instanceof ClosedQuestionStateRequest stateRequest)) {
             throw new IllegalArgumentException("ClosedQuestionChecker called for invalid state request class: " + request.getClass());
         }
+        closedQuestionState.setSelectedAnswerIds(stateRequest.getSelectedAnswers());
+        return check(closedQuestionState, request.isAnswered());
+    }
+
+    @Nonnull
+    @Override
+    public QuestionState check(@Nonnull QuestionState state, boolean answered) {
+        if (!(state instanceof ClosedQuestionState closedQuestionState)) {
+            throw new IllegalArgumentException("ClosedQuestionChecker called for invalid state class: " + state.getClass());
+        }
         if (state.getQuestion() instanceof ClosedQuestion closedQuestion) {
-            Set<UUID> selectedAnswers = stateRequest.getSelectedAnswers();
 //            MultipleChoiceScoringMode scoringMode = closedQuestion.getScoringMode();
-            state.setAnswered(true);
+            Set<UUID> selectedAnswers = closedQuestionState.getSelectedAnswerIds();
+            state.setAnswered(answered);
             closedQuestionState.setSelectedAnswerIds(selectedAnswers);
-            if (closedQuestion.getAnswers().stream()
-                    .anyMatch(a -> !a.isCorrect() && selectedAnswers.contains(a.getId()))) {
-                state.setScore(0.0);
-                state.setWasCorrectAnswer(false);
-                return state;
+            if (state.isAnswered()) {
+                if (closedQuestion.getAnswers().stream()
+                        .anyMatch(a -> !a.isCorrect() && selectedAnswers.contains(a.getId()))) {
+                    state.setScore(0.0);
+                    state.setWasCorrectAnswer(false);
+                    return state;
+                }
+                if (closedQuestion.getAnswers().stream()
+                        .anyMatch(a -> a.isCorrect() && !selectedAnswers.contains(a.getId()))) {
+                    state.setScore(0.0);
+                    state.setWasCorrectAnswer(false);
+                    return state;
+                }
+                state.setScore(closedQuestion.getPoints());
+                state.setWasCorrectAnswer(true);
             }
-            if (closedQuestion.getAnswers().stream()
-                    .anyMatch(a -> a.isCorrect() && !selectedAnswers.contains(a.getId()))) {
-                state.setScore(0.0);
-                state.setWasCorrectAnswer(false);
-                return state;
-            }
-//            return updateScore(closedQuestionState, closedQuestion, selectedAnswers);
-            state.setScore(closedQuestion.getPoints());
-            state.setWasCorrectAnswer(true);
             return state;
         }
         throw new IllegalArgumentException("ClosedQuestionChecker called for invalid question class: " + state.getQuestion().getClass());
+    }
+
+    @Override
+    public boolean hasConflict(@Nonnull QuestionState state, @Nonnull QuestionStateRequest request) {
+        return state.isAnswered();
     }
 
     private ClosedQuestionState updateScore(ClosedQuestionState state, ClosedQuestion closedQuestion, Set<UUID> selectedAnswers) {

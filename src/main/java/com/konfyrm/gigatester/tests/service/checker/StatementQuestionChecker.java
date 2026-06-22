@@ -40,4 +40,16 @@ public class StatementQuestionChecker implements QuestionChecker {
         return state;
     }
 
+    @Nonnull
+    @Override
+    public QuestionState check(@Nonnull QuestionState state, boolean answered) {
+        return null;
+    }
+
+    @Nonnull
+    @Override
+    public boolean hasConflict(@Nonnull QuestionState state, @Nonnull QuestionStateRequest request) {
+        return state.isAnswered();
+    }
+
 }

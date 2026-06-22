@@ -1,6 +1,7 @@
 package com.konfyrm.gigatester.tests.controller;
 
 import com.konfyrm.gigatester.tests.domain.dto.request.TestStateRequest;
+import com.konfyrm.gigatester.tests.domain.dto.request.TestStateUpdateRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,6 @@ public interface TestStateController {
 
     // todo: get test execution by test Id (and user id in the future when users will be supported, that is before making it public)
     @PutMapping("api/v1/states/{testStateId}")
-    ResponseEntity<?> updateTestState(@PathVariable("testStateId") UUID testStateId);
+    ResponseEntity<?> updateTestState(@PathVariable("testStateId") UUID testStateId, @RequestBody TestStateUpdateRequest request);
 
 }

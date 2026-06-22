@@ -1,32 +1,33 @@
 package com.konfyrm.gigatester.tests.service;
 
+import com.konfyrm.gigatester.questions.domain.dto.enums.GradingRule;
+import com.konfyrm.gigatester.questions.domain.entity.OpenQuestion;
+import com.konfyrm.gigatester.tests.domain.dto.enums.NavigateActionDto;
 import com.konfyrm.gigatester.tests.domain.dto.request.TestStateRequest;
-import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
-import com.konfyrm.gigatester.tests.domain.entity.TestExecutionState;
-import com.konfyrm.gigatester.tests.domain.entity.TestMode;
-import com.konfyrm.gigatester.tests.domain.entity.TestState;
+import com.konfyrm.gigatester.tests.domain.entity.*;
 import com.konfyrm.gigatester.tests.repository.TestStateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class TestStateService {
 
+    private final QuestionStateService questionStateService;
     private final TestStateFactory testStateFactory;
     private final TestStateRepository testStateRepository;
 
     @Autowired
     public TestStateService(
+            QuestionStateService questionStateService,
             TestStateFactory testStateFactory,
             TestStateRepository testStateRepository
     ) {
+        this.questionStateService = questionStateService;
         this.testStateFactory = testStateFactory;
         this.testStateRepository = testStateRepository;
     }
@@ -51,7 +52,7 @@ public class TestStateService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Test state for test with given id not found: " + testId));
     }
 
-    public void updateTestExecutionState(UUID testStateId) {
+    public void updateTestExecutionState(UUID testStateId, NavigateActionDto navigateActionDto) {
         Optional<TestState> testStateOptional = testStateRepository.findById(testStateId);
         if (testStateOptional.isEmpty()) {
             throw new IllegalArgumentException("Unknown test state with id: " + testStateId);
@@ -62,12 +63,9 @@ public class TestStateService {
             // todo: reset test
             testStateFactory.resetTestState(testState);
         }
-        if (executionState == TestExecutionState.IN_PROGRESS && isLastQuestionIndex(testState)) {
-            if (testState.getMode() == TestMode.LEARNING && notAllQuestionsAnsweredCorrectly(testState)) {
-                // todo: change current question index?
-                // todo: all question index update should be done HERE and not while
-                // todo: updating the question state!
-                testState.getQuestions().stream()// todo: update question count of each type?
+        if (testState.getMode() == TestMode.LEARNING && executionState == TestExecutionState.IN_PROGRESS && isLastQuestionIndex(testState)) {
+            if (notAllQuestionsAnsweredCorrectly(testState)) {
+                testState.getQuestions().stream()
                         .filter(q -> !q.isWasCorrectAnswer())
                         .forEach(q -> QuestionStateResetStrategy.getStrategy(q.getQuestion().getType()).reset(q));
                 testState.getQuestions().removeIf(QuestionState::isAnswered);
@@ -83,12 +81,77 @@ public class TestStateService {
                 testState.setCurrentQuestionIndex(0);
                 testState.setExecutionState(TestExecutionState.FINISHED);
             }
-        } else if (executionState == TestExecutionState.IN_PROGRESS) {
-            testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() + 1);
-        }
-        testStateRepository.save(testState);
-        // todo: if learning mode and not all questions answered correctly, reset the wrong answered questions and currentQuestionIndex
+        } else if (executionState == TestExecutionState.IN_PROGRESS && testState.getMode() == TestMode.LEARNING) {
+            testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() + 1);//todo: either + 1 or - 1?
+        } else if ((executionState == TestExecutionState.IN_PROGRESS || executionState == TestExecutionState.IN_REVIEW) && testState.getMode() == TestMode.EXAM) {
+            if (navigateActionDto == NavigateActionDto.NEXT) {
+                testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() + 1);
+            } else if (navigateActionDto == NavigateActionDto.PREVIOUS) {
+                testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() - 1);
+            } else if (navigateActionDto == NavigateActionDto.FINISH) {
+                // TODO: check and grade all questions!!!!!!
+                // unanswered open questions which are graded in MANUAL mode should not be set to score 0,
+                // instead they should be skipped IF TestExecutionState == IN_PROGRESS
+                // grade questions
+                testState.getQuestions().stream()
+                        .filter(q -> isUnansweredQuestion(q, testState.getExecutionState()))
+                        .forEach(q -> questionStateService.checkQuestion(q, true));
+                // todo: separate state handlers for exam and learning?
+                testState.getQuestions().stream()
+                        .filter(q -> isUnansweredQuestion(q, testState.getExecutionState()))
+                        .forEach(q -> {
+                            q.setAnswered(true);
+                            q.setWasCorrectAnswer(false);
+                            q.setScore(0.0);
+                        });
 
+                // todo: test open questions !!!!
+
+                testState.setCurrentQuestionIndex(0);
+                if (testState.getExecutionState() == TestExecutionState.IN_PROGRESS) {
+                    testState.setExecutionState(TestExecutionState.IN_REVIEW);
+                } else {
+                    testState.setExecutionState(TestExecutionState.FINISHED);
+                }
+            }
+        }
+
+
+        testStateRepository.save(testState);
+    }
+
+    private boolean isUnansweredQuestion(QuestionState questionState, TestExecutionState testExecutionState) {
+        if (questionState instanceof OpenQuestionState openQuestionState) {
+            if (openQuestionState.getQuestion() instanceof OpenQuestion openQuestion) {
+                if (isNotYetGraded(testExecutionState, openQuestion)) {
+                    return false;
+                }
+            } else {
+
+
+
+
+
+                // todo: strict open questions do not work as intended
+                // todo; they somehow end up with 0 points and wasCorrectAnswer: false...
+                // todo: whereas closed questions DO not
+
+
+
+
+
+
+
+
+                throw new IllegalStateException("Open question state does not contain an open question.");
+            }
+        }
+        return !questionState.isAnswered();
+    }
+
+    private boolean isNotYetGraded(TestExecutionState testExecutionState, OpenQuestion openQuestion) {
+        return openQuestion.getGradingRulesHash().contains(GradingRule.MANUAL.getHash() + "")
+                && testExecutionState == TestExecutionState.IN_PROGRESS;
     }
 
     private boolean isLastQuestionIndex(TestState testState) {

@@ -9,4 +9,9 @@ public interface QuestionChecker {
     @Nonnull
     QuestionState check(@Nonnull QuestionState state, @Nonnull QuestionStateRequest request);
 
+    @Nonnull
+    QuestionState check(@Nonnull QuestionState state, boolean answered);
+
+    boolean hasConflict(@Nonnull QuestionState state, @Nonnull QuestionStateRequest request);
+
 }

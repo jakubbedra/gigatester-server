@@ -29,15 +29,54 @@ public class OpenQuestionChecker implements QuestionChecker {
             throw new IllegalArgumentException("OpenQuestionChecker called for invalid question class: " + state.getQuestion().getClass());
         }
         openQuestionState.setGivenAnswer(openQuestionStateRequest.getGivenAnswer());
-        state.setAnswered(true);
+        state.setAnswered(request.isAnswered());
         Set<GradingRule> gradingRules = GradingRule.fromHash(openQuestion.getGradingRulesHash());
         if (gradingRules.contains(GradingRule.MANUAL)) {
+            if (!state.isAnswered()) {
+                return state;
+            }
             state.setScore(openQuestionStateRequest.getScoredPoints());
             state.setWasCorrectAnswer(Objects.equals(state.getScore(), openQuestion.getPoints()));
             return state;
         }
 
-        String givenAnswer = openQuestionStateRequest.getGivenAnswer();
+        return check(state, openQuestion, gradingRules, openQuestionStateRequest.getGivenAnswer());
+    }
+
+    @Nonnull
+    @Override
+    public QuestionState check(@Nonnull QuestionState state, boolean answered) {
+        if (!(state instanceof OpenQuestionState openQuestionState)) {
+            throw new IllegalArgumentException("OpenQuestionChecker called for invalid state class: " + state.getClass());
+        }
+        if (!(state.getQuestion() instanceof OpenQuestion openQuestion)) {
+            throw new IllegalArgumentException("OpenQuestionChecker called for invalid question class: " + state.getQuestion().getClass());
+        }
+        Set<GradingRule> gradingRules = GradingRule.fromHash(openQuestion.getGradingRulesHash());
+        state.setAnswered(answered);
+        return check(state, openQuestion, gradingRules, openQuestionState.getGivenAnswer());
+    }
+
+    @SuppressWarnings("all")
+    @Override
+    public boolean hasConflict(@Nonnull QuestionState state, @Nonnull QuestionStateRequest request) {
+        if (!(state instanceof OpenQuestionState openQuestionState)) {
+            throw new IllegalArgumentException("OpenQuestionChecker called for invalid state class: " + state.getClass());
+        }
+        if (!(request instanceof OpenQuestionStateRequest openQuestionStateRequest)) {
+            throw new IllegalArgumentException("OpenQuestionChecker called for invalid state request class: " + request.getClass());
+        }
+        if (!(state.getQuestion() instanceof OpenQuestion openQuestion)) {
+            throw new IllegalArgumentException("OpenQuestionChecker called for invalid question class: " + state.getQuestion().getClass());
+        }
+        Set<GradingRule> gradingRules = GradingRule.fromHash(openQuestion.getGradingRulesHash());
+        if (gradingRules.contains(GradingRule.MANUAL)) {
+            return openQuestionState.isAnswered() && !openQuestionStateRequest.getGivenAnswer().equals(openQuestionState.getGivenAnswer());
+        }
+        return openQuestionState.isAnswered();
+    }
+
+    private QuestionState check(@Nonnull QuestionState state, OpenQuestion openQuestion, Set<GradingRule> gradingRules, String givenAnswer) {
         String correctAnswer = openQuestion.getAnswer().getText();
         if (isCorrect(givenAnswer, correctAnswer, gradingRules)) {
             state.setScore(openQuestion.getPoints());

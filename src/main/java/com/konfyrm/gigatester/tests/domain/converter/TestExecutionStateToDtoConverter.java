@@ -10,12 +10,14 @@ public class TestExecutionStateToDtoConverter {
     private static final Map<TestExecutionState, TestExecutionStateDto> ENTITY_TO_DTO_MAP = Map.of(
             TestExecutionState.NOT_STARTED, TestExecutionStateDto.NOT_STARTED,
             TestExecutionState.IN_PROGRESS, TestExecutionStateDto.IN_PROGRESS,
+            TestExecutionState.IN_REVIEW, TestExecutionStateDto.IN_REVIEW,
             TestExecutionState.FINISHED, TestExecutionStateDto.FINISHED
     );
 
     private static final Map<TestExecutionStateDto, TestExecutionState> DTO_TO_ENTITY_MAP = Map.of(
             TestExecutionStateDto.NOT_STARTED, TestExecutionState.NOT_STARTED,
             TestExecutionStateDto.IN_PROGRESS, TestExecutionState.IN_PROGRESS,
+            TestExecutionStateDto.IN_REVIEW, TestExecutionState.IN_REVIEW,
             TestExecutionStateDto.FINISHED, TestExecutionState.FINISHED
     );
 
