@@ -3,6 +3,7 @@ package com.konfyrm.gigatester.crosswords.domain.entity;
 import com.konfyrm.gigatester.crosswords.domain.entity.enums.ClueType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 
 import java.util.UUID;
 
@@ -21,6 +22,9 @@ public class CrosswordTerm {
 
     private String term;
 
+    @Lob
+    @JdbcTypeCode(org.hibernate.type.SqlTypes.LONGVARCHAR)
+    @Column(columnDefinition = "text")
     private String clue;
 
     private ClueType clueType;
