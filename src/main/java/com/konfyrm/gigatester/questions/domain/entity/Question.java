@@ -45,7 +45,13 @@ public abstract class Question {
     @Builder.Default
     private Integer answerProportions = 1;
 
+    @Builder.Default
     @ManyToMany
+    @JoinTable(
+            name = "questions_tags",
+            joinColumns = @JoinColumn(name = "question_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
     private List<Tag> tags = new ArrayList<>();
 
 }

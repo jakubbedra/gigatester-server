@@ -4,6 +4,7 @@ import com.konfyrm.gigatester.tests.domain.dto.request.TestRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface TestController {
@@ -22,5 +23,11 @@ public interface TestController {
 
     @DeleteMapping("api/v1/tests/{testId}")
     ResponseEntity<?> deleteTest(@PathVariable("testId") UUID testId);
+
+    @GetMapping("api/v1/tests/{testId}/question-counts")
+    ResponseEntity<?> getQuestionCounts(
+            @PathVariable("testId") UUID testId,
+            @RequestParam(value = "tagIds", required = false) List<UUID> tagIds
+    );
 
 }

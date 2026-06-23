@@ -5,7 +5,10 @@ import com.konfyrm.gigatester.questions.domain.dto.QuestionDto;
 import com.konfyrm.gigatester.questions.domain.dto.enums.QuestionType;
 import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.questions.domain.converter.EntityConverter;
+import com.konfyrm.gigatester.tags.dto.TagResponse;
 import jakarta.annotation.Nonnull;
+
+import java.util.List;
 
 public abstract class AbstractQuestionConverter<DTO extends QuestionDto, ENTITY extends Question> implements EntityConverter<DTO, ENTITY> {
 
@@ -42,11 +45,15 @@ public abstract class AbstractQuestionConverter<DTO extends QuestionDto, ENTITY 
     @Nonnull
     @Override
     public DTO toDto(@Nonnull ENTITY entity) {
+        List<TagResponse> tags = entity.getTags() == null ? List.of() : entity.getTags().stream()
+                .map(t -> TagResponse.builder().id(t.getId()).key(t.getKey()).build())
+                .toList();
         return createQuestionDtoBuilder(entity)
                 .type(questionType)
                 .content(questionContentConverter.toDto(entity.getContent()))
                 .contentProportions(entity.getContentProportions())
                 .answerProportions(entity.getAnswerProportions())
+                .tags(tags)
                 .build();
     }
 

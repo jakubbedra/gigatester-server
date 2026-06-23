@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.konfyrm.gigatester.questions.domain.dto.enums.QuestionType;
 import com.konfyrm.gigatester.questions.domain.entity.QuestionContent;
+import com.konfyrm.gigatester.tags.dto.TagResponse;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
@@ -13,7 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -54,6 +55,6 @@ public class QuestionDto {
     private Integer answerProportions;
 
     @Nullable
-    private Set<UUID> tags;
+    private List<TagResponse> tags;
 
 }

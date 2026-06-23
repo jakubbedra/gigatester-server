@@ -5,6 +5,10 @@ import com.konfyrm.gigatester.tests.domain.dto.enums.TestModeDto;
 import jakarta.annotation.Nullable;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 @Getter
 @Setter
 @Builder
@@ -26,7 +30,8 @@ public class TestStateRequest {
     private TestDisplayTypeDto displayType;
 
     private boolean timeLimitEnabled;
-    //todo: coming soon...
-    // {startDate: xxx, timeLimitMs: xxx}
+
+    @Builder.Default
+    private List<UUID> tagIds = new ArrayList<>();
 
 }

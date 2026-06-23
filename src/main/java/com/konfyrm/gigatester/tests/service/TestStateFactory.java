@@ -92,10 +92,11 @@ public class TestStateFactory {
     }
 
     private TestState.TestStateBuilder createQuestionStates(UUID testId, TestState.TestStateBuilder builder, TestStateRequest request) {
+        List<UUID> tagIds = request.getTagIds();
         if (request.getMode() == TestModeDto.LEARNING) {
-            List<QuestionState> closedQuestionStates = resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION);
-            List<QuestionState> openQuestionStates = resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION);
-            List<QuestionState> statementQuestionStates = resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION);
+            List<QuestionState> closedQuestionStates = fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, tagIds);
+            List<QuestionState> openQuestionStates = fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, tagIds);
+            List<QuestionState> statementQuestionStates = fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, tagIds);
             ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
                     .addAll(closedQuestionStates)
                     .addAll(openQuestionStates)
@@ -112,9 +113,9 @@ public class TestStateFactory {
                     .closedQuestionsCount(closedQuestionStates.size());
         }
         ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
-                .addAll(resetQuestionStates(testId, TesterEntityType.CLOSED_QUESTION, request.getClosedQuestionsCount()))
-                .addAll(resetQuestionStates(testId, TesterEntityType.OPEN_QUESTION, request.getOpenQuestionsCount()))
-                .addAll(resetQuestionStates(testId, TesterEntityType.STATEMENT_QUESTION, request.getStatementQuestionsCount()))
+                .addAll(fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, request.getClosedQuestionsCount(), tagIds))
+                .addAll(fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, request.getOpenQuestionsCount(), tagIds))
+                .addAll(fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, request.getStatementQuestionsCount(), tagIds))
                 .build());
         Collections.shuffle(questionStates);
         int order = 0;
@@ -122,6 +123,22 @@ public class TestStateFactory {
             question.setSequence(order++);
         }
         return builder.questions(questionStates);
+    }
+
+    private List<QuestionState> fetchQuestions(UUID testId, TesterEntityType entityType, List<UUID> tagIds) {
+        QuestionStateCreationStrategy strategy = QuestionStateCreationStrategy.getStrategy(entityType);
+        List<?> questions = tagIds == null || tagIds.isEmpty()
+                ? questionRepository.findRandomQuestions(testId, entityType.toString())
+                : questionRepository.findRandomQuestionsByTags(testId, entityType.toString(), tagIds);
+        return questions.stream().map(q -> strategy.createQuestionState((com.konfyrm.gigatester.questions.domain.entity.Question) q)).toList();
+    }
+
+    private List<QuestionState> fetchQuestions(UUID testId, TesterEntityType entityType, int count, List<UUID> tagIds) {
+        QuestionStateCreationStrategy strategy = QuestionStateCreationStrategy.getStrategy(entityType);
+        List<?> questions = tagIds == null || tagIds.isEmpty()
+                ? questionRepository.findRandomQuestions(testId, entityType.toString(), count)
+                : questionRepository.findRandomQuestionsByTags(testId, entityType.toString(), count, tagIds);
+        return questions.stream().map(q -> strategy.createQuestionState((com.konfyrm.gigatester.questions.domain.entity.Question) q)).toList();
     }
 
     private List<QuestionState> resetQuestionStates(UUID testId, TesterEntityType entityType, int count) {

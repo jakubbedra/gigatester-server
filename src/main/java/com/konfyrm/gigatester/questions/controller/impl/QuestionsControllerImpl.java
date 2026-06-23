@@ -67,8 +67,11 @@ public class QuestionsControllerImpl implements QuestionsController {
         if (questionOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        request.setId(questionOptional.get().getId());
-        questionService.saveQuestion(questionMappingService.toEntity(request));
+        Question existing = questionOptional.get();
+        request.setId(existing.getId());
+        Question updated = questionMappingService.toEntity(request);
+        updated.getTags().addAll(existing.getTags());
+        questionService.saveQuestion(updated);
         return ResponseEntity.noContent().build();
     }
 
