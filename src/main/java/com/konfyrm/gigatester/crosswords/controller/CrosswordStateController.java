@@ -1,11 +1,9 @@
 package com.konfyrm.gigatester.crosswords.controller;
 
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateRequest;
+import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateUpdateRequest;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
@@ -15,6 +13,9 @@ public interface CrosswordStateController {
     ResponseEntity<?> getCrosswordState(@PathVariable("id") UUID id);
 
     @PostMapping("api/v1/crossword-states")
-    ResponseEntity<?> createCrosswordState(@RequestBody CrosswordStateRequest crosswordStateRequest);
+    ResponseEntity<?> createCrosswordState(@RequestBody CrosswordStateRequest request);
+
+    @PutMapping("api/v1/crossword-states/{id}")
+    ResponseEntity<?> createCrosswordState(@PathVariable("id") UUID id, @RequestBody CrosswordStateUpdateRequest request);
 
 }

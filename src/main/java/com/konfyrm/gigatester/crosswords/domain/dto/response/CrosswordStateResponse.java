@@ -20,6 +20,12 @@ public class CrosswordStateResponse {
 
     private int height;
 
+    private UUID crosswordId;
+
+    private String crosswordName;
+
+    private TurnResultResponse lastTurn;
+
     private List<CrosswordPlayerResponse> players;
 
     private List<CrosswordStateClueResponse> clues;

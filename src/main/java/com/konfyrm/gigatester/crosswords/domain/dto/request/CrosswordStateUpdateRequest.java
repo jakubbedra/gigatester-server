@@ -9,7 +9,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CrosswordLettersRequest {
+public class CrosswordStateUpdateRequest {
 
     private List<CrosswordLetterRequest> letters;
 

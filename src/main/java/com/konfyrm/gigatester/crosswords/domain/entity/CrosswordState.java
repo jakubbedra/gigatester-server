@@ -45,7 +45,7 @@ public class CrosswordState {
     @JoinColumn(name = "crossword_state_id")
     private List<CrosswordStateTerm> terms;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "crossword_id")
     private Crossword crossword;
 

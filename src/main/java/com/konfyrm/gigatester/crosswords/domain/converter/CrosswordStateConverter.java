@@ -4,6 +4,7 @@ import com.konfyrm.gigatester.crosswords.domain.dto.enums.DirectionDto;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.CrosswordPlayerResponse;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.CrosswordStateClueResponse;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.CrosswordStateResponse;
+import com.konfyrm.gigatester.crosswords.domain.dto.response.TurnResultResponse;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordPlayer;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordStateTerm;
@@ -15,9 +16,17 @@ import java.util.List;
 @Component
 public class CrosswordStateConverter {
 
+    public CrosswordStateResponse toResponse(CrosswordState state, TurnResultResponse turnResult) {
+        CrosswordStateResponse response = toResponse(state);
+        response.setLastTurn(turnResult);
+        return response;
+    }
+
     public CrosswordStateResponse toResponse(CrosswordState state) {
         return CrosswordStateResponse.builder()
                 .id(state.getId())
+                .crosswordId(state.getCrossword() != null ? state.getCrossword().getId() : null)
+                .crosswordName(state.getCrossword() != null ? state.getCrossword().getName() : null)
                 .currentGrid(state.getCurrentGrid())
                 .width(state.getWidth())
                 .height(state.getHeight())

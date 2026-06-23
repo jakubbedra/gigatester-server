@@ -24,6 +24,7 @@ public class CrosswordStateTerm {
 
     private int row;
 
+    @Column(name = "col")
     private int column;
 
     private Direction direction;
