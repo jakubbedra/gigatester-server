@@ -16,4 +16,6 @@ public interface ImageService {
 
     void deleteAll(UUID questionId);
 
+    String uploadWithKey(String key, MultipartFile file) throws IOException;
+
 }

@@ -90,6 +90,19 @@ public class R2ImageService implements ImageService {
         });
     }
 
+    @Override
+    public String uploadWithKey(String key, MultipartFile file) throws IOException {
+        s3Client.putObject(
+                PutObjectRequest.builder()
+                        .bucket(bucket)
+                        .key(key)
+                        .contentType(file.getContentType())
+                        .build(),
+                RequestBody.fromInputStream(file.getInputStream(), file.getSize())
+        );
+        return publicUrl + "/" + key;
+    }
+
     private String buildKey(UUID questionId, String filename) {
         return "questions/" + questionId + "/" + filename;
     }
