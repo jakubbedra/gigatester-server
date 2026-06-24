@@ -80,6 +80,17 @@ public class UserService implements UserDetailsService {
         return toResponse(user);
     }
 
+    public UserResponse demoteToUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new IllegalArgumentException("Cannot change admin role");
+        }
+        user.setRole(UserRole.USER);
+        userRepository.save(user);
+        return toResponse(user);
+    }
+
     public void deleteUser(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -105,6 +116,23 @@ public class UserService implements UserDetailsService {
         user.setProfilePictureUrl(url);
         userRepository.save(user);
         return toResponse(user);
+    }
+
+    public String generatePasswordResetToken(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return jwtService.generatePasswordResetToken(user);
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        if (!jwtService.isPasswordResetToken(token)) {
+            throw new IllegalArgumentException("Invalid or expired reset token");
+        }
+        String username = jwtService.extractUsername(token);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     public void ensureAdminExists(String username, String rawPassword) {

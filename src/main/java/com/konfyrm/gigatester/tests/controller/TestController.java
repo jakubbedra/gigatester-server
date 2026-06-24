@@ -1,7 +1,9 @@
 package com.konfyrm.gigatester.tests.controller;
 
 import com.konfyrm.gigatester.tests.domain.dto.request.TestRequest;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,7 +18,7 @@ public interface TestController {
     ResponseEntity<?> getTests();
 
     @GetMapping("api/v1/tests/{testId}")
-    ResponseEntity<?> getTest(@PathVariable("testId") UUID testId);
+    ResponseEntity<?> getTest(@PathVariable("testId") UUID testId, @AuthenticationPrincipal User user);
 
     @PutMapping("api/v1/tests/{testId}")
     ResponseEntity<?> updateTest(@PathVariable("testId") UUID testId, @RequestBody TestRequest testRequest);
@@ -27,7 +29,8 @@ public interface TestController {
     @GetMapping("api/v1/tests/{testId}/question-counts")
     ResponseEntity<?> getQuestionCounts(
             @PathVariable("testId") UUID testId,
-            @RequestParam(value = "tagIds", required = false) List<UUID> tagIds
+            @RequestParam(value = "tagIds", required = false) List<UUID> tagIds,
+            @AuthenticationPrincipal User user
     );
 
 }

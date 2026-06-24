@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.crosswords.domain.entity;
 
+import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -48,6 +49,10 @@ public class CrosswordState {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "crossword_id")
     private Crossword crossword;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
     public int index(int row, int col) {
         return row * width + col;

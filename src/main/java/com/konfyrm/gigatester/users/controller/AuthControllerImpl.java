@@ -23,4 +23,10 @@ public class AuthControllerImpl implements AuthController {
     public ResponseEntity<AuthResponse> login(LoginRequest request) {
         return ResponseEntity.ok(userService.login(request.getUsername(), request.getPassword()));
     }
+
+    @Override
+    public ResponseEntity<Void> resetPassword(String token, String newPassword) {
+        userService.resetPassword(token, newPassword);
+        return ResponseEntity.noContent().build();
+    }
 }

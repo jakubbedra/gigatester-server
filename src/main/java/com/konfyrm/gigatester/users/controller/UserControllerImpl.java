@@ -68,8 +68,20 @@ public class UserControllerImpl implements UserController {
 
     @Override
     @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> demote(UUID id) {
+        return ResponseEntity.ok(userService.demoteToUser(id));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(UUID id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> generatePasswordResetToken(UUID id) {
+        return ResponseEntity.ok(userService.generatePasswordResetToken(id));
     }
 }

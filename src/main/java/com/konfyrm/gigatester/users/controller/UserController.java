@@ -34,6 +34,12 @@ public interface UserController {
     @PutMapping("/{id}/promote")
     ResponseEntity<UserResponse> promote(@PathVariable UUID id);
 
+    @PutMapping("/{id}/demote")
+    ResponseEntity<UserResponse> demote(@PathVariable UUID id);
+
     @DeleteMapping("/{id}")
     ResponseEntity<Void> delete(@PathVariable UUID id);
+
+    @PostMapping("/{id}/password-reset-token")
+    ResponseEntity<String> generatePasswordResetToken(@PathVariable UUID id);
 }

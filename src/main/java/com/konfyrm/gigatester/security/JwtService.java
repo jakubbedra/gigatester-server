@@ -27,6 +27,25 @@ public class JwtService {
                 .compact();
     }
 
+    public String generatePasswordResetToken(UserDetails userDetails) {
+        return Jwts.builder()
+                .subject(userDetails.getUsername())
+                .claim("type", "password_reset")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 86_400_000L))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public boolean isPasswordResetToken(String token) {
+        try {
+            String type = extractClaim(token, claims -> claims.get("type", String.class));
+            return "password_reset".equals(type) && !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }

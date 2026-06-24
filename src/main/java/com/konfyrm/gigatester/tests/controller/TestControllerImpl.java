@@ -2,12 +2,16 @@ package com.konfyrm.gigatester.tests.controller;
 
 import com.konfyrm.gigatester.common.domain.TesterEntityType;
 import com.konfyrm.gigatester.questions.repository.QuestionRepository;
+import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.tests.domain.converter.TestConverter;
 import com.konfyrm.gigatester.tests.domain.dto.request.TestRequest;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
 import com.konfyrm.gigatester.tests.service.TestService;
+import com.konfyrm.gigatester.users.domain.entity.User;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -19,11 +23,14 @@ public class TestControllerImpl implements TestController {
     private final TestService testService;
     private final TestConverter testConverter;
     private final QuestionRepository questionRepository;
+    private final SubjectGroupAccessService accessService;
 
-    public TestControllerImpl(TestService testService, TestConverter testConverter, QuestionRepository questionRepository) {
+    public TestControllerImpl(TestService testService, TestConverter testConverter,
+                              QuestionRepository questionRepository, SubjectGroupAccessService accessService) {
         this.testService = testService;
         this.testConverter = testConverter;
         this.questionRepository = questionRepository;
+        this.accessService = accessService;
     }
 
     @Override
@@ -39,7 +46,10 @@ public class TestControllerImpl implements TestController {
     }
 
     @Override
-    public ResponseEntity<?> getTest(UUID testId) {
+    public ResponseEntity<?> getTest(UUID testId, User user) {
+        if (!accessService.hasAccessToTest(testId, user)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         return ResponseEntity.ok(testConverter.toResponse(testService.findTest(testId)));
     }
 
@@ -57,7 +67,10 @@ public class TestControllerImpl implements TestController {
     }
 
     @Override
-    public ResponseEntity<?> getQuestionCounts(UUID testId, List<UUID> tagIds) {
+    public ResponseEntity<?> getQuestionCounts(UUID testId, List<UUID> tagIds, User user) {
+        if (!accessService.hasAccessToTest(testId, user)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         boolean filtered = tagIds != null && !tagIds.isEmpty();
         long closed = filtered
                 ? questionRepository.countByTestIdAndTypeAndTags(testId, TesterEntityType.CLOSED_QUESTION.toString(), tagIds)

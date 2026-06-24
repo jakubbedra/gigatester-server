@@ -1,6 +1,7 @@
 package com.konfyrm.gigatester.tests.domain.entity;
 
 import com.konfyrm.gigatester.common.domain.TesterEntityType;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,6 +24,10 @@ public class TestState {
 
     @ManyToOne
     private Test test;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Builder.Default
     private TesterEntityType type = TesterEntityType.TEST_STATE;

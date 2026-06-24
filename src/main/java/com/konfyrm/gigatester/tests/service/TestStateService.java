@@ -2,10 +2,12 @@ package com.konfyrm.gigatester.tests.service;
 
 import com.konfyrm.gigatester.questions.domain.dto.enums.GradingRule;
 import com.konfyrm.gigatester.questions.domain.entity.OpenQuestion;
+import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.tests.domain.dto.enums.NavigateActionDto;
 import com.konfyrm.gigatester.tests.domain.dto.request.TestStateRequest;
 import com.konfyrm.gigatester.tests.domain.entity.*;
 import com.konfyrm.gigatester.tests.repository.TestStateRepository;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,36 +22,43 @@ public class TestStateService {
     private final QuestionStateService questionStateService;
     private final TestStateFactory testStateFactory;
     private final TestStateRepository testStateRepository;
+    private final SubjectGroupAccessService accessService;
 
     @Autowired
     public TestStateService(
             QuestionStateService questionStateService,
             TestStateFactory testStateFactory,
-            TestStateRepository testStateRepository
+            TestStateRepository testStateRepository,
+            SubjectGroupAccessService accessService
     ) {
         this.questionStateService = questionStateService;
         this.testStateFactory = testStateFactory;
         this.testStateRepository = testStateRepository;
+        this.accessService = accessService;
     }
 
-    public TestState createTestState(UUID testId, TestStateRequest testStateRequest) {
-        // creates a new test state, or if a test state is already present for the given (user, test), the old test state is reset to new settings
-        TestState testState = testStateFactory.createTestState(testId, testStateRequest);
-        Optional<TestState> oldTestStateOptional = testStateRepository.findFirstByTest_Id(testId);
-        if (oldTestStateOptional.isPresent()) {
-            testStateRepository.delete(oldTestStateOptional.get());
+    public TestState createTestState(UUID testId, TestStateRequest testStateRequest, User user) {
+        if (!accessService.hasAccessToTest(testId, user)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
+        TestState testState = testStateFactory.createTestState(testId, testStateRequest);
+        testState.setUser(user);
+        testStateRepository.findFirstByTest_IdAndUser_Id(testId, user.getId())
+                .ifPresent(testStateRepository::delete);
         return testStateRepository.save(testState);
     }
 
-    public TestState findTestState(UUID stateId) {
-        return testStateRepository.findById(stateId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Test state for test with given id not found: " + stateId));
+    public TestState findTestState(UUID stateId, UUID userId) {
+        TestState state = testStateRepository.findById(stateId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Test state not found: " + stateId));
+        if (state.getUser() == null || !state.getUser().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        return state;
     }
 
-    public TestState findTestStateByTestId(UUID testId) {
-        return testStateRepository.findFirstByTest_Id(testId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Test state for test with given id not found: " + testId));
+    public Optional<TestState> findTestStateByTestAndUser(UUID testId, UUID userId) {
+        return testStateRepository.findFirstByTest_IdAndUser_Id(testId, userId);
     }
 
     public void updateTestExecutionState(UUID testStateId, NavigateActionDto navigateActionDto) {
