@@ -4,9 +4,9 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/gigatester
-    username: postgres
-    password: admin
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
@@ -15,10 +15,19 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+giga-tester:
+  admin-username: ${ADMIN_USERNAME}
+  admin-password: ${ADMIN_PASSWORD}
+  security:
+    enabled: true
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: 86400000
+
 cloudflare:
   r2:
-    endpoint: <endpoint>
-    access-key: <access-key>
-    secret-key: <secret-key>
-    bucket: gigatester-images-dev
-    public-url: <public-url>
+    endpoint: ${R2_ENDPOINT}
+    access-key: ${R2_ACCESS_KEY}
+    secret-key: ${R2_SECRET_KEY}
+    bucket: ${R2_BUCKET}
+    public-url: ${R2_PUBLIC_URL}
