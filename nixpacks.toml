@@ -1,0 +1,5 @@
+[phases.build]
+cmds = ["./gradlew bootJar -x test --no-daemon"]
+
+[start]
+cmd = "java -jar build/libs/gigatester-0.0.1-SNAPSHOT.jar"
