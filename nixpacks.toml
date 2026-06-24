@@ -1,2 +1,0 @@
-[phases.build]
-cmds = ["./gradlew bootJar -x test --no-daemon"]
