@@ -1,0 +1,16 @@
+package com.konfyrm.gigatester.ai.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.UUID;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class AiSaveRequest {
+    private UUID testId;
+    private List<AiQuestionDto> questions;
+}

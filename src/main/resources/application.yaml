@@ -27,6 +27,10 @@ giga-tester:
     secret: ${JWT_SECRET}
     expiration-ms: 86400000
 
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: gpt-4o-mini
+
 cloudflare:
   r2:
     endpoint: ${R2_ENDPOINT}

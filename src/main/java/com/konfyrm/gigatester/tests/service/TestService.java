@@ -1,11 +1,13 @@
 package com.konfyrm.gigatester.tests.service;
 
+import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
 import com.konfyrm.gigatester.tests.repository.TestRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,6 +46,13 @@ public class TestService {
                 .closedQuestionsCount(test.getClosedQuestionsCount())
                 .passingPercentage(test.getPassingPercentage())
                 .build());
+    }
+
+    public void addQuestionsToTest(UUID testId, List<Question> questions) {
+        Test test = findTest(testId);
+        List<Question> updated = new ArrayList<>(test.getQuestions());
+        updated.addAll(questions);
+        testRepository.save(test.toBuilder().questions(updated).build());
     }
 
     public void deleteTest(UUID testId) {
