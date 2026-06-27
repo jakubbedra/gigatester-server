@@ -6,14 +6,14 @@ import com.konfyrm.gigatester.ai.service.AiService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
 
-@Component
+@RestController
 public class AiControllerImpl implements AiController {
 
     private final AiService aiService;
@@ -46,4 +46,5 @@ public class AiControllerImpl implements AiController {
         aiService.saveQuestions(request.getTestId(), request.getQuestions());
         return ResponseEntity.ok().build();
     }
+
 }
