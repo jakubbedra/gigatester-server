@@ -7,8 +7,10 @@ import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.service.CrosswordTurnService.TurnOutcome;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordStateRepository;
+import com.konfyrm.gigatester.metrics.service.DailyStreakService;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.users.domain.entity.User;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ public class CrosswordStateService {
     private final CrosswordGeneratorService crosswordGeneratorService;
     private final CrosswordTurnService crosswordTurnService;
     private final SubjectGroupAccessService accessService;
+    private final DailyStreakService streakService;
 
     @Autowired
     public CrosswordStateService(
@@ -32,13 +35,15 @@ public class CrosswordStateService {
             CrosswordRepository crosswordRepository,
             CrosswordGeneratorService crosswordGeneratorService,
             CrosswordTurnService crosswordTurnService,
-            SubjectGroupAccessService accessService
+            SubjectGroupAccessService accessService,
+            DailyStreakService streakService
     ) {
         this.crosswordStateRepository = crosswordStateRepository;
         this.crosswordRepository = crosswordRepository;
         this.crosswordGeneratorService = crosswordGeneratorService;
         this.crosswordTurnService = crosswordTurnService;
         this.accessService = accessService;
+        this.streakService = streakService;
     }
 
     public CrosswordState findCrosswordState(UUID id) {
@@ -54,9 +59,14 @@ public class CrosswordStateService {
         return state;
     }
 
+    @Transactional
     public TurnOutcome updateCrosswordState(UUID id, CrosswordStateUpdateRequest request, UUID userId) {
         CrosswordState state = findCrosswordState(id, userId);
-        return crosswordTurnService.processTurn(state, request.getLetters());
+        TurnOutcome outcome = crosswordTurnService.processTurn(state, request.getLetters());
+        if (state.getUser() != null && !state.getCurrentGrid().contains(String.valueOf(CrosswordState.UNCOVERED_FIELD))) {
+            streakService.recordActivity(state.getUser());
+        }
+        return outcome;
     }
 
     public Optional<CrosswordState> findUserCrosswordState(UUID crosswordId, UUID userId) {

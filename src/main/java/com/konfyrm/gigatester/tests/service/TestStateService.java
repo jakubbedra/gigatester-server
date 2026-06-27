@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.tests.service;
 
 import com.konfyrm.gigatester.questions.domain.dto.enums.GradingRule;
 import com.konfyrm.gigatester.questions.domain.entity.OpenQuestion;
+import com.konfyrm.gigatester.metrics.service.DailyStreakService;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.tests.domain.dto.enums.NavigateActionDto;
 import com.konfyrm.gigatester.tests.domain.dto.request.TestStateRequest;
@@ -11,6 +12,7 @@ import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
@@ -23,18 +25,21 @@ public class TestStateService {
     private final TestStateFactory testStateFactory;
     private final TestStateRepository testStateRepository;
     private final SubjectGroupAccessService accessService;
+    private final DailyStreakService streakService;
 
     @Autowired
     public TestStateService(
             QuestionStateService questionStateService,
             TestStateFactory testStateFactory,
             TestStateRepository testStateRepository,
-            SubjectGroupAccessService accessService
+            SubjectGroupAccessService accessService,
+            DailyStreakService streakService
     ) {
         this.questionStateService = questionStateService;
         this.testStateFactory = testStateFactory;
         this.testStateRepository = testStateRepository;
         this.accessService = accessService;
+        this.streakService = streakService;
     }
 
     public TestState createTestState(UUID testId, TestStateRequest testStateRequest, User user) {
@@ -61,6 +66,7 @@ public class TestStateService {
         return testStateRepository.findFirstByTest_IdAndUser_Id(testId, userId);
     }
 
+    @Transactional
     public void updateTestExecutionState(UUID testStateId, NavigateActionDto navigateActionDto) {
         Optional<TestState> testStateOptional = testStateRepository.findById(testStateId);
         if (testStateOptional.isEmpty()) {
@@ -88,6 +94,7 @@ public class TestStateService {
                         });
                 testState.setCurrentQuestionIndex(0);
                 testState.setExecutionState(TestExecutionState.FINISHED);
+                if (testState.getUser() != null) streakService.recordActivity(testState.getUser());
             }
         } else if (executionState == TestExecutionState.IN_PROGRESS && testState.getMode() == TestMode.LEARNING && navigateActionDto == NavigateActionDto.FINISH) {
             if (notAllQuestionsAnsweredCorrectly(testState)) {
@@ -99,6 +106,7 @@ public class TestStateService {
             } else {
                 testState.setCurrentQuestionIndex(0);
                 testState.setExecutionState(TestExecutionState.FINISHED);
+                if (testState.getUser() != null) streakService.recordActivity(testState.getUser());
             }
         } else if (executionState == TestExecutionState.IN_PROGRESS && testState.getMode() == TestMode.LEARNING) {
             testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() + 1);
@@ -124,6 +132,7 @@ public class TestStateService {
                     testState.setExecutionState(TestExecutionState.IN_REVIEW);
                 } else {
                     testState.setExecutionState(TestExecutionState.FINISHED);
+                    if (testState.getUser() != null) streakService.recordActivity(testState.getUser());
                 }
             }
         }
