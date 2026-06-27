@@ -93,10 +93,11 @@ public class TestStateFactory {
 
     private TestState.TestStateBuilder createQuestionStates(UUID testId, TestState.TestStateBuilder builder, TestStateRequest request) {
         List<UUID> tagIds = request.getTagIds();
+        boolean exclude = request.isExcludeTags();
         if (request.getMode() == TestModeDto.LEARNING) {
-            List<QuestionState> closedQuestionStates = fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, tagIds);
-            List<QuestionState> openQuestionStates = fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, tagIds);
-            List<QuestionState> statementQuestionStates = fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, tagIds);
+            List<QuestionState> closedQuestionStates = fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, tagIds, exclude);
+            List<QuestionState> openQuestionStates = fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, tagIds, exclude);
+            List<QuestionState> statementQuestionStates = fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, tagIds, exclude);
             ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
                     .addAll(closedQuestionStates)
                     .addAll(openQuestionStates)
@@ -113,9 +114,9 @@ public class TestStateFactory {
                     .closedQuestionsCount(closedQuestionStates.size());
         }
         ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
-                .addAll(fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, request.getClosedQuestionsCount(), tagIds))
-                .addAll(fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, request.getOpenQuestionsCount(), tagIds))
-                .addAll(fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, request.getStatementQuestionsCount(), tagIds))
+                .addAll(fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, request.getClosedQuestionsCount(), tagIds, exclude))
+                .addAll(fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, request.getOpenQuestionsCount(), tagIds, exclude))
+                .addAll(fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, request.getStatementQuestionsCount(), tagIds, exclude))
                 .build());
         Collections.shuffle(questionStates);
         int order = 0;
@@ -125,19 +126,29 @@ public class TestStateFactory {
         return builder.questions(questionStates);
     }
 
-    private List<QuestionState> fetchQuestions(UUID testId, TesterEntityType entityType, List<UUID> tagIds) {
+    private List<QuestionState> fetchQuestions(UUID testId, TesterEntityType entityType, List<UUID> tagIds, boolean exclude) {
         QuestionStateCreationStrategy strategy = QuestionStateCreationStrategy.getStrategy(entityType);
-        List<?> questions = tagIds == null || tagIds.isEmpty()
-                ? questionRepository.findRandomQuestions(testId, entityType.toString())
-                : questionRepository.findRandomQuestionsByTags(testId, entityType.toString(), tagIds);
+        List<?> questions;
+        if (tagIds == null || tagIds.isEmpty()) {
+            questions = questionRepository.findRandomQuestions(testId, entityType.toString());
+        } else if (exclude) {
+            questions = questionRepository.findRandomQuestionsExcludingTags(testId, entityType.toString(), tagIds);
+        } else {
+            questions = questionRepository.findRandomQuestionsByTags(testId, entityType.toString(), tagIds);
+        }
         return questions.stream().map(q -> strategy.createQuestionState((com.konfyrm.gigatester.questions.domain.entity.Question) q)).toList();
     }
 
-    private List<QuestionState> fetchQuestions(UUID testId, TesterEntityType entityType, int count, List<UUID> tagIds) {
+    private List<QuestionState> fetchQuestions(UUID testId, TesterEntityType entityType, int count, List<UUID> tagIds, boolean exclude) {
         QuestionStateCreationStrategy strategy = QuestionStateCreationStrategy.getStrategy(entityType);
-        List<?> questions = tagIds == null || tagIds.isEmpty()
-                ? questionRepository.findRandomQuestions(testId, entityType.toString(), count)
-                : questionRepository.findRandomQuestionsByTags(testId, entityType.toString(), count, tagIds);
+        List<?> questions;
+        if (tagIds == null || tagIds.isEmpty()) {
+            questions = questionRepository.findRandomQuestions(testId, entityType.toString(), count);
+        } else if (exclude) {
+            questions = questionRepository.findRandomQuestionsExcludingTags(testId, entityType.toString(), count, tagIds);
+        } else {
+            questions = questionRepository.findRandomQuestionsByTags(testId, entityType.toString(), count, tagIds);
+        }
         return questions.stream().map(q -> strategy.createQuestionState((com.konfyrm.gigatester.questions.domain.entity.Question) q)).toList();
     }
 

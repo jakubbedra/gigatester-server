@@ -34,4 +34,6 @@ public class TestStateRequest {
     @Builder.Default
     private List<UUID> tagIds = new ArrayList<>();
 
+    private boolean excludeTags;
+
 }

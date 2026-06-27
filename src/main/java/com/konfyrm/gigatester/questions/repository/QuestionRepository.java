@@ -102,6 +102,58 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
         FROM questions q
         JOIN test_templates_questions tq ON tq.questions_id = q.id
         WHERE tq.test_id = :testId
+            AND q.type = :type
+            AND q.id NOT IN (
+                SELECT qt2.question_id FROM questions_tags qt2 WHERE qt2.tag_id IN (:tagIds)
+            )
+        ORDER BY RANDOM()
+        LIMIT :count
+    """, nativeQuery = true)
+    List<Question> findRandomQuestionsExcludingTags(
+            @Param("testId") UUID testId,
+            @Param("type") String type,
+            @Param("count") int count,
+            @Param("tagIds") Collection<UUID> tagIds
+    );
+
+    @Query(value = """
+        SELECT q.*
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
+        WHERE tq.test_id = :testId
+            AND q.type = :type
+            AND q.id NOT IN (
+                SELECT qt2.question_id FROM questions_tags qt2 WHERE qt2.tag_id IN (:tagIds)
+            )
+        ORDER BY RANDOM()
+    """, nativeQuery = true)
+    List<Question> findRandomQuestionsExcludingTags(
+            @Param("testId") UUID testId,
+            @Param("type") String type,
+            @Param("tagIds") Collection<UUID> tagIds
+    );
+
+    @Query(value = """
+        SELECT COUNT(DISTINCT q.id)
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
+        WHERE tq.test_id = :testId
+            AND q.type = :type
+            AND q.id NOT IN (
+                SELECT qt2.question_id FROM questions_tags qt2 WHERE qt2.tag_id IN (:tagIds)
+            )
+    """, nativeQuery = true)
+    long countByTestIdAndTypeExcludingTags(
+            @Param("testId") UUID testId,
+            @Param("type") String type,
+            @Param("tagIds") Collection<UUID> tagIds
+    );
+
+    @Query(value = """
+        SELECT q.*
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
+        WHERE tq.test_id = :testId
     """, nativeQuery = true)
     List<Question> findAllByTestId(@Param("testId") UUID testId);
 

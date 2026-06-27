@@ -30,6 +30,7 @@ public interface TestController {
     ResponseEntity<?> getQuestionCounts(
             @PathVariable("testId") UUID testId,
             @RequestParam(value = "tagIds", required = false) List<UUID> tagIds,
+            @RequestParam(value = "excludeTags", defaultValue = "false") boolean excludeTags,
             @AuthenticationPrincipal User user
     );
 
