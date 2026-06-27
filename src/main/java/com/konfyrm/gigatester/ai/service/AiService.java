@@ -14,6 +14,7 @@ import com.konfyrm.gigatester.tests.service.TestService;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -41,20 +42,28 @@ public class AiService {
     @Value("${openai.model}")
     private String model;
 
-    public AiService(TagRepository tagRepository, QuestionService questionService,
-                     TestService testService, ObjectMapper objectMapper) {
+    @Autowired
+    public AiService(
+            TagRepository tagRepository,
+            QuestionService questionService,
+            TestService testService,
+            ObjectMapper objectMapper
+    ) {
         this.tagRepository = tagRepository;
         this.questionService = questionService;
         this.testService = testService;
         this.objectMapper = objectMapper;
     }
 
-    public List<AiQuestionDto> generateQuestions(MultipartFile pdf,
-                                                  int closedCount,
-                                                  int multipleChoiceCount,
-                                                  int openCount) throws IOException {
+    public List<AiQuestionDto> generateQuestions(
+            MultipartFile pdf,
+            int closedCount,
+            int multipleChoiceCount,
+            int openCount,
+            int answerCount
+    ) throws IOException {
         String text = extractText(pdf);
-        String prompt = buildPrompt(text, closedCount, multipleChoiceCount, openCount);
+        String prompt = buildPrompt(text, closedCount, multipleChoiceCount, openCount, answerCount);
         String json = callOpenAi(prompt);
         return parseResponse(json);
     }
@@ -77,7 +86,7 @@ public class AiService {
         }
     }
 
-    private String buildPrompt(String text, int closed, int multipleChoice, int open) {
+    private String buildPrompt(String text, int closed, int multipleChoice, int open, int answerCount) {
         return String.format("""
                 You are an exam question generator. Based on the text provided, generate exam questions.
 
@@ -95,8 +104,6 @@ public class AiService {
                       "questionText": "...",
                       "answers": [
                         {"text": "...", "correct": true},
-                        {"text": "...", "correct": false},
-                        {"text": "...", "correct": false},
                         {"text": "...", "correct": false}
                       ],
                       "openAnswer": null
@@ -115,12 +122,12 @@ public class AiService {
                 - Single-answer closed questions: multipleChoice=false, exactly one answer has correct=true
                 - Multiple-answer closed questions: multipleChoice=true, one or more answers have correct=true
                 - Open questions: type=OPEN_QUESTION, answers=[], openAnswer has the expected answer
-                - Generate 4 answer options for each closed question
+                - Generate exactly %d answer options for each closed question
                 - All text must be in the same language as the source text
 
                 Source text:
                 %s
-                """, closed, multipleChoice, open, text);
+                """, closed, multipleChoice, open, answerCount, text);
     }
 
     private String callOpenAi(String prompt) {

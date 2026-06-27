@@ -28,10 +28,11 @@ public class AiControllerImpl implements AiController {
             MultipartFile file,
             int closedCount,
             int multipleChoiceCount,
-            int openCount
+            int openCount,
+            int answerCount
     ) {
         try {
-            List<AiQuestionDto> questions = aiService.generateQuestions(file, closedCount, multipleChoiceCount, openCount);
+            List<AiQuestionDto> questions = aiService.generateQuestions(file, closedCount, multipleChoiceCount, openCount, answerCount);
             return ResponseEntity.ok(questions);
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to read PDF: " + e.getMessage());

@@ -16,7 +16,8 @@ public interface AiController {
             @RequestPart("file") MultipartFile file,
             @RequestParam(defaultValue = "0") int closedCount,
             @RequestParam(defaultValue = "0") int multipleChoiceCount,
-            @RequestParam(defaultValue = "0") int openCount
+            @RequestParam(defaultValue = "0") int openCount,
+            @RequestParam(defaultValue = "4") int answerCount
     );
 
     @PostMapping("/save-questions")
