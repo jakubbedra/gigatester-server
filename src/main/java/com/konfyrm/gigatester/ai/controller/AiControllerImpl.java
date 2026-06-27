@@ -6,15 +6,14 @@ import com.konfyrm.gigatester.ai.service.AiService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
 
-@RestController
-@RequestMapping("/api/v1/ai")
+@Component
 public class AiControllerImpl implements AiController {
 
     private final AiService aiService;
@@ -24,13 +23,12 @@ public class AiControllerImpl implements AiController {
     }
 
     @Override
-    @PostMapping(value = "/generate-questions", consumes = "multipart/form-data")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN')")
     public ResponseEntity<List<AiQuestionDto>> generateQuestions(
-            @RequestPart("file") MultipartFile file,
-            @RequestParam(defaultValue = "0") int closedCount,
-            @RequestParam(defaultValue = "0") int multipleChoiceCount,
-            @RequestParam(defaultValue = "0") int openCount
+            MultipartFile file,
+            int closedCount,
+            int multipleChoiceCount,
+            int openCount
     ) {
         try {
             List<AiQuestionDto> questions = aiService.generateQuestions(file, closedCount, multipleChoiceCount, openCount);
@@ -43,9 +41,8 @@ public class AiControllerImpl implements AiController {
     }
 
     @Override
-    @PostMapping("/save-questions")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN')")
-    public ResponseEntity<Void> saveQuestions(@RequestBody AiSaveRequest request) {
+    public ResponseEntity<Void> saveQuestions(AiSaveRequest request) {
         aiService.saveQuestions(request.getTestId(), request.getQuestions());
         return ResponseEntity.ok().build();
     }
