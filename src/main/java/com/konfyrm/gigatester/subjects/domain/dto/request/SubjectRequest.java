@@ -14,6 +14,10 @@ public class SubjectRequest {
 
     private String name;
 
+    private String description;
+
+    private double difficulty;
+
     private List<UUID> tests;
 
     private List<UUID> crosswords;

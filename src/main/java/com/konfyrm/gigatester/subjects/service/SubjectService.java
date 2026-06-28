@@ -36,6 +36,8 @@ public class SubjectService {
         Subject existing = subjectRepository.findById(subjectId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject with id: " + subjectId + " not found."));
         existing.setName(subject.getName());
+        existing.setDescription(subject.getDescription());
+        existing.setDifficulty(subject.getDifficulty());
         existing.setTests(subject.getTests());
         existing.setCrosswords(subject.getCrosswords());
     }

@@ -4,7 +4,9 @@ import com.konfyrm.gigatester.subjects.domain.converter.SubjectConverter;
 import com.konfyrm.gigatester.subjects.domain.dto.request.SubjectRequest;
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
 import com.konfyrm.gigatester.subjects.service.SubjectService;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -34,8 +36,9 @@ public class SubjectControllerImpl implements SubjectController {
     }
 
     @Override
-    public ResponseEntity<?> getSubject(UUID subjectId) {
-        return ResponseEntity.ok(subjectConverter.toResponse(subjectService.findSubject(subjectId)));
+    public ResponseEntity<?> getSubject(UUID subjectId, @AuthenticationPrincipal User user) {
+        UUID userId = user != null ? user.getId() : null;
+        return ResponseEntity.ok(subjectConverter.toResponse(subjectService.findSubject(subjectId), userId));
     }
 
     @Override

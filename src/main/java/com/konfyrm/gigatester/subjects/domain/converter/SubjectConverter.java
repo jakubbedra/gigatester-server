@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.subjects.domain.converter;
 
+import com.konfyrm.gigatester.comments.service.CommentService;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
 import com.konfyrm.gigatester.subjects.domain.dto.request.SubjectRequest;
@@ -12,17 +13,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class SubjectConverter {
 
     private final TestRepository testRepository;
     private final CrosswordRepository crosswordRepository;
+    private final CommentService commentService;
 
     @Autowired
-    public SubjectConverter(TestRepository testRepository, CrosswordRepository crosswordRepository) {
+    public SubjectConverter(TestRepository testRepository, CrosswordRepository crosswordRepository, CommentService commentService) {
         this.testRepository = testRepository;
         this.crosswordRepository = crosswordRepository;
+        this.commentService = commentService;
     }
 
     public Subject toEntity(SubjectRequest request) {
@@ -33,6 +37,8 @@ public class SubjectConverter {
 
         return Subject.builder()
                 .name(request.getName())
+                .description(request.getDescription())
+                .difficulty(request.getDifficulty())
                 .tests(request.getTests().stream()
                         .map(id -> testRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Test not found for id: " + id)))
                         .toList())
@@ -40,15 +46,19 @@ public class SubjectConverter {
                 .build();
     }
 
-    public SubjectResponse toResponse(Subject subject) {
-        List<java.util.UUID> crosswordIds = subject.getCrosswords() == null ? List.of() :
+    public SubjectResponse toResponse(Subject subject, UUID currentUserId) {
+        List<UUID> crosswordIds = subject.getCrosswords() == null ? List.of() :
                 subject.getCrosswords().stream().map(Crossword::getId).toList();
 
         return SubjectResponse.builder()
                 .id(subject.getId())
                 .name(subject.getName())
+                .description(subject.getDescription())
+                .difficulty(subject.getDifficulty())
                 .tests(subject.getTests().stream().map(Test::getId).toList())
                 .crosswords(crosswordIds)
+                .comments(subject.getComments() == null ? List.of() :
+                        subject.getComments().stream().map(c -> commentService.toResponse(c, currentUserId)).toList())
                 .build();
     }
 
