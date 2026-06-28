@@ -32,6 +32,7 @@ public class TestConverter {
                 .closedQuestionsCount(request.getClosedQuestionsCount())
                 .openQuestionsCount(request.getOpenQuestionsCount())
                 .passingPercentage(request.getPassingPercentage())
+                .timeLimit(request.getTimeLimit())
                 .build();
     }
 
@@ -45,6 +46,7 @@ public class TestConverter {
                 .storedClosedQuestionsCount((int) test.getQuestions().stream().filter(q -> q.getType() == TesterEntityType.CLOSED_QUESTION).count())
                 .storedOpenQuestionsCount((int) test.getQuestions().stream().filter(q -> q.getType() == TesterEntityType.OPEN_QUESTION).count())
                 .passingPercentage(test.getPassingPercentage())
+                .timeLimit(test.getTimeLimit())
                 .build();
     }
 

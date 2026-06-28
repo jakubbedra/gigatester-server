@@ -28,4 +28,6 @@ public class TestResponse {
 
     private double passingPercentage;
 
+    private long timeLimit;
+
 }

@@ -38,12 +38,15 @@ public class TestStateFactory {
         TestState.TestStateBuilder builder = TestState.builder()
                 .test(testOptional.get())
                 .currentQuestionIndex(0)
+                .startTime(System.currentTimeMillis())
                 .executionState(TestExecutionState.IN_PROGRESS)
                 .mode(TestModeToDtoConverter.toEntity(mode))
                 .closedQuestionsCount(request.getClosedQuestionsCount())
                 .openQuestionsCount(request.getOpenQuestionsCount())
                 .statementQuestionsCount(request.getStatementQuestionsCount())
-                .displayType(TestDisplayTypeToDtoConverter.toEntity(request.getDisplayType()));
+                .displayType(TestDisplayTypeToDtoConverter.toEntity(request.getDisplayType()))
+                .timeLimitEnabled(request.isTimeLimitEnabled())
+                .timeLimitMs(request.getTimeLimitMs());
         if (request.getPassingPercentage() != null) {
             builder.passingPercentage(request.getPassingPercentage());
         }
@@ -53,6 +56,7 @@ public class TestStateFactory {
     public void resetTestState(TestState testState) {
         testState.setCurrentQuestionIndex(0);
         testState.setExecutionState(TestExecutionState.IN_PROGRESS);
+        testState.setStartTime(System.currentTimeMillis());
         resetQuestionStates(testState);
     }
 

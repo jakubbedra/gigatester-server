@@ -31,4 +31,7 @@ public class Test {
 
     private double passingPercentage;
 
+    @Column(columnDefinition = "bigint default 0")
+    private long timeLimit;
+
 }

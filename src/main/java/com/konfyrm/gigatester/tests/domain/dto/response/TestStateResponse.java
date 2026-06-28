@@ -42,6 +42,12 @@ public class TestStateResponse {
 
     private double maxScore;
 
+    private boolean timeLimitEnabled;
+
+    private long timeLimitMs;
+
+    private long startTime;
+
     @Getter
     @Setter
     @Builder

@@ -31,6 +31,8 @@ public class TestStateRequest {
 
     private boolean timeLimitEnabled;
 
+    private long timeLimitMs;
+
     @Builder.Default
     private List<UUID> tagIds = new ArrayList<>();
 

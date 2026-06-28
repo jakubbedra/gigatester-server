@@ -63,4 +63,10 @@ public class TestState {
 
     private boolean timeLimitEnabled = false;
 
+    @Column(columnDefinition = "bigint default -1")
+    private long timeLimitMs = -1;
+
+    @Column(columnDefinition = "bigint default 0")
+    private long startTime;
+
 }

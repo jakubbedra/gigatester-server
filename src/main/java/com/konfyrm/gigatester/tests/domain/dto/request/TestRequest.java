@@ -22,4 +22,6 @@ public class TestRequest {
 
     private double passingPercentage;
 
+    private long timeLimit;
+
 }

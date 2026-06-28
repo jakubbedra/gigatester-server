@@ -33,10 +33,12 @@ public class TestStateConverter {
         if (testState.getPassingPercentage() != null) {
             builder.passingPercentage(testState.getPassingPercentage());
         }
-        // todo: something's wrong here...
-        builder.totalScore(testState.getQuestions().stream().mapToDouble(q -> q.getScore() != null ? q.getScore() : 0.0).sum());
-        builder.maxScore(testState.getQuestions().stream().mapToDouble(this::getMaxScore).sum());
-        return builder.build();
+        return builder.totalScore(testState.getQuestions().stream().mapToDouble(q -> q.getScore() != null ? q.getScore() : 0.0).sum())
+                .maxScore(testState.getQuestions().stream().mapToDouble(this::getMaxScore).sum())
+                .timeLimitEnabled(testState.isTimeLimitEnabled())
+                .timeLimitMs(testState.getTimeLimitMs())
+                .startTime(testState.getStartTime())
+                .build();
     }
 
     private double getMaxScore(QuestionState questionState) {

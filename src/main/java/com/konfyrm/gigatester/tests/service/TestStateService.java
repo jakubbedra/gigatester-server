@@ -77,6 +77,25 @@ public class TestStateService {
         if (TestExecutionState.getNext(executionState) == TestExecutionState.NOT_STARTED) {
             testStateFactory.resetTestState(testState);
         }
+        if (testState.isTimeLimitEnabled()
+                && testState.getTimeLimitMs() > 0
+                && executionState == TestExecutionState.IN_PROGRESS
+                && System.currentTimeMillis() - testState.getStartTime() > testState.getTimeLimitMs()) {
+            testState.getQuestions().stream()
+                    .filter(q -> isUnansweredQuestion(q, TestExecutionState.IN_PROGRESS))
+                    .forEach(q -> questionStateService.checkQuestion(q, true));
+            testState.getQuestions().stream()
+                    .filter(q -> isUnansweredQuestion(q, TestExecutionState.IN_PROGRESS))
+                    .forEach(q -> {
+                        q.setAnswered(true);
+                        q.setWasCorrectAnswer(false);
+                        q.setScore(0.0);
+                    });
+            testState.setCurrentQuestionIndex(0);
+            testState.setExecutionState(TestExecutionState.IN_REVIEW);
+            testStateRepository.save(testState);
+            return;
+        }
         if (testState.getMode() == TestMode.LEARNING && executionState == TestExecutionState.IN_PROGRESS && isLastQuestionIndex(testState)) {
             if (notAllQuestionsAnsweredCorrectly(testState)) {
                 testState.getQuestions().stream()
@@ -132,7 +151,9 @@ public class TestStateService {
                     testState.setExecutionState(TestExecutionState.IN_REVIEW);
                 } else {
                     testState.setExecutionState(TestExecutionState.FINISHED);
-                    if (testState.getUser() != null) streakService.recordActivity(testState.getUser());
+                    if (testState.getUser() != null) {
+                        streakService.recordActivity(testState.getUser());
+                    }
                 }
             }
         }
