@@ -3,6 +3,7 @@ package com.konfyrm.gigatester.tests.service;
 import com.konfyrm.gigatester.questions.domain.dto.enums.GradingRule;
 import com.konfyrm.gigatester.questions.domain.entity.OpenQuestion;
 import com.konfyrm.gigatester.metrics.service.DailyStreakService;
+import com.konfyrm.gigatester.metrics.service.MetricsService;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.tests.domain.dto.enums.NavigateActionDto;
 import com.konfyrm.gigatester.tests.domain.dto.request.TestStateRequest;
@@ -26,6 +27,7 @@ public class TestStateService {
     private final TestStateRepository testStateRepository;
     private final SubjectGroupAccessService accessService;
     private final DailyStreakService streakService;
+    private final MetricsService metricsService;
 
     @Autowired
     public TestStateService(
@@ -33,13 +35,15 @@ public class TestStateService {
             TestStateFactory testStateFactory,
             TestStateRepository testStateRepository,
             SubjectGroupAccessService accessService,
-            DailyStreakService streakService
+            DailyStreakService streakService,
+            MetricsService metricsService
     ) {
         this.questionStateService = questionStateService;
         this.testStateFactory = testStateFactory;
         this.testStateRepository = testStateRepository;
         this.accessService = accessService;
         this.streakService = streakService;
+        this.metricsService = metricsService;
     }
 
     public TestState createTestState(UUID testId, TestStateRequest testStateRequest, User user) {
@@ -48,6 +52,7 @@ public class TestStateService {
         }
         TestState testState = testStateFactory.createTestState(testId, testStateRequest);
         testState.setUser(user);
+        metricsService.applyWeightedShuffle(testState, user);
         testStateRepository.findFirstByTest_IdAndUser_Id(testId, user.getId())
                 .ifPresent(testStateRepository::delete);
         return testStateRepository.save(testState);
@@ -113,7 +118,10 @@ public class TestStateService {
                         });
                 testState.setCurrentQuestionIndex(0);
                 testState.setExecutionState(TestExecutionState.FINISHED);
-                if (testState.getUser() != null) streakService.recordActivity(testState.getUser());
+                if (testState.getUser() != null) {
+                    streakService.recordActivity(testState.getUser());
+                    metricsService.recordTestCompletion(testState.getUser(), testState);
+                }
             }
         } else if (executionState == TestExecutionState.IN_PROGRESS && testState.getMode() == TestMode.LEARNING && navigateActionDto == NavigateActionDto.FINISH) {
             if (notAllQuestionsAnsweredCorrectly(testState)) {
@@ -125,7 +133,10 @@ public class TestStateService {
             } else {
                 testState.setCurrentQuestionIndex(0);
                 testState.setExecutionState(TestExecutionState.FINISHED);
-                if (testState.getUser() != null) streakService.recordActivity(testState.getUser());
+                if (testState.getUser() != null) {
+                    streakService.recordActivity(testState.getUser());
+                    metricsService.recordTestCompletion(testState.getUser(), testState);
+                }
             }
         } else if (executionState == TestExecutionState.IN_PROGRESS && testState.getMode() == TestMode.LEARNING) {
             testState.setCurrentQuestionIndex(testState.getCurrentQuestionIndex() + 1);
@@ -153,6 +164,7 @@ public class TestStateService {
                     testState.setExecutionState(TestExecutionState.FINISHED);
                     if (testState.getUser() != null) {
                         streakService.recordActivity(testState.getUser());
+                        metricsService.recordTestCompletion(testState.getUser(), testState);
                     }
                 }
             }
