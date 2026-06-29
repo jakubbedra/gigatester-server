@@ -11,6 +11,11 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -28,7 +33,7 @@ giga-tester:
     expiration-ms: 86400000
 
 openai:
-  api-key: ${OPENAI_API_KEY:}
+  api-key: ${OPENAI_API_KEY}
   model: gpt-4o-mini
 
 cloudflare:
