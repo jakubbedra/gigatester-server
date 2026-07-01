@@ -36,6 +36,10 @@ public class User implements UserDetails {
     @Column
     private String profilePictureUrl;
 
+    @Lob
+    @Column(columnDefinition = "text")
+    private String bio;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));

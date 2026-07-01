@@ -4,20 +4,24 @@ import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateReques
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateUpdateRequest;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
+import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTerm;
 import com.konfyrm.gigatester.crosswords.service.CrosswordTurnService.TurnOutcome;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordStateRepository;
 import com.konfyrm.gigatester.metrics.service.DailyStreakService;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.users.domain.entity.User;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class CrosswordStateService {
@@ -28,6 +32,7 @@ public class CrosswordStateService {
     private final CrosswordTurnService crosswordTurnService;
     private final SubjectGroupAccessService accessService;
     private final DailyStreakService streakService;
+    private final CrosswordGenerationJobStore jobStore;
 
     @Autowired
     public CrosswordStateService(
@@ -36,7 +41,8 @@ public class CrosswordStateService {
             CrosswordGeneratorService crosswordGeneratorService,
             CrosswordTurnService crosswordTurnService,
             SubjectGroupAccessService accessService,
-            DailyStreakService streakService
+            DailyStreakService streakService,
+            CrosswordGenerationJobStore jobStore
     ) {
         this.crosswordStateRepository = crosswordStateRepository;
         this.crosswordRepository = crosswordRepository;
@@ -44,6 +50,7 @@ public class CrosswordStateService {
         this.crosswordTurnService = crosswordTurnService;
         this.accessService = accessService;
         this.streakService = streakService;
+        this.jobStore = jobStore;
     }
 
     public CrosswordState findCrosswordState(UUID id) {
@@ -73,6 +80,36 @@ public class CrosswordStateService {
         return crosswordStateRepository.findFirstByCrossword_IdAndUser_Id(crosswordId, userId);
     }
 
+    public UUID startAsyncGeneration(CrosswordStateRequest request, User user) {
+        UUID jobId = jobStore.create();
+        generateAsync(request, user, jobId);
+        return jobId;
+    }
+
+    @Async
+    @Transactional
+    public void generateAsync(CrosswordStateRequest request, User user, UUID jobId) {
+        try {
+            if (jobStore.isCancelled(jobId)) return;
+            CrosswordState state = createCrosswordState(request, user);
+            if (jobStore.isCancelled(jobId)) return;
+            jobStore.complete(jobId, state.getId());
+        } catch (Exception e) {
+            if (!jobStore.isCancelled(jobId)) {
+                jobStore.fail(jobId, e.getMessage());
+            }
+        }
+    }
+
+    public void cancelJob(UUID jobId) {
+        jobStore.cancel(jobId);
+    }
+
+    public CrosswordGenerationJobStore.JobResult getJobResult(UUID jobId) {
+        return jobStore.get(jobId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found: " + jobId));
+    }
+
     public CrosswordState createCrosswordState(CrosswordStateRequest request, User user) {
         if (!accessService.hasAccessToCrossword(request.getCrosswordId(), user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
@@ -81,7 +118,15 @@ public class CrosswordStateService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Crossword with id: " + request.getCrosswordId() + " not found."));
         crosswordStateRepository.findFirstByCrossword_IdAndUser_Id(request.getCrosswordId(), user.getId())
                 .ifPresent(crosswordStateRepository::delete);
-        CrosswordState state = crosswordGeneratorService.generate(crossword, request.getNumberOfWords());
+
+        List<UUID> tagFilter = request.getTagFilter();
+        List<CrosswordTerm> filteredTerms = (tagFilter == null || tagFilter.isEmpty())
+                ? crossword.getTerms()
+                : crossword.getTerms().stream()
+                        .filter(t -> t.getTags() != null && t.getTags().stream().anyMatch(tag -> tagFilter.contains(tag.getId())))
+                        .collect(Collectors.toList());
+
+        CrosswordState state = crosswordGeneratorService.generate(crossword, filteredTerms, request.getNumberOfWords());
         state.setUser(user);
         return crosswordStateRepository.save(state);
     }

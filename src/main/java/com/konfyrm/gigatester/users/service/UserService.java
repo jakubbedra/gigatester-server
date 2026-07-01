@@ -118,6 +118,12 @@ public class UserService implements UserDetailsService {
         return toResponse(user);
     }
 
+    public UserResponse updateBio(User user, String bio) {
+        user.setBio(bio);
+        userRepository.save(user);
+        return toResponse(user);
+    }
+
     public String generatePasswordResetToken(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -152,6 +158,7 @@ public class UserService implements UserDetailsService {
                 .username(user.getUsername())
                 .role(user.getRole())
                 .profilePictureUrl(user.getProfilePictureUrl())
+                .bio(user.getBio())
                 .build();
     }
 }

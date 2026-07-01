@@ -1,8 +1,10 @@
 package com.konfyrm.gigatester.crosswords.domain.dto.response;
 
 import com.konfyrm.gigatester.crosswords.domain.entity.enums.ClueType;
+import com.konfyrm.gigatester.tags.dto.TagResponse;
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -19,5 +21,7 @@ public class CrosswordTermResponse {
     private String clue;
 
     private ClueType clueType;
+
+    private List<TagResponse> tags;
 
 }

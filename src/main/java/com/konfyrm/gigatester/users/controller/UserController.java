@@ -25,6 +25,10 @@ public interface UserController {
     ResponseEntity<UserResponse> uploadProfilePicture(@AuthenticationPrincipal User user,
                                                       @RequestParam("file") MultipartFile file);
 
+    @PutMapping("/me/bio")
+    ResponseEntity<UserResponse> updateBio(@AuthenticationPrincipal User user,
+                                           @RequestBody java.util.Map<String, String> body);
+
     @GetMapping
     ResponseEntity<List<UserResponse>> findAll();
 

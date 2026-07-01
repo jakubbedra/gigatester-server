@@ -70,6 +70,10 @@ public class CrosswordService {
                         .ifPresent(t -> {
                             t.setClue(incomingTerm.getClue());
                             t.setClueType(incomingTerm.getClueType());
+                            t.getTags().clear();
+                            if (incomingTerm.getTags() != null) {
+                                t.getTags().addAll(incomingTerm.getTags());
+                            }
                         });
             } else {
                 existing.getTerms().add(incomingTerm);

@@ -2,6 +2,8 @@ package com.konfyrm.gigatester.subjects.service;
 
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
+import com.konfyrm.gigatester.users.domain.entity.User;
+import com.konfyrm.gigatester.users.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,9 +16,11 @@ import java.util.UUID;
 public class SubjectService {
 
     private final SubjectRepository subjectRepository;
+    private final UserRepository userRepository;
 
-    public SubjectService(SubjectRepository subjectRepository) {
+    public SubjectService(SubjectRepository subjectRepository, UserRepository userRepository) {
         this.subjectRepository = subjectRepository;
+        this.userRepository = userRepository;
     }
 
     public Subject addSubject(Subject subject) {
@@ -40,6 +44,26 @@ public class SubjectService {
         existing.setDifficulty(subject.getDifficulty());
         existing.setTests(subject.getTests());
         existing.setCrosswords(subject.getCrosswords());
+    }
+
+    @Transactional
+    public Subject addAuthor(UUID subjectId, UUID userId) {
+        Subject subject = findSubject(subjectId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (subject.getAuthors().stream().noneMatch(a -> a.getId().equals(userId))) {
+            subject.getAuthors().add(user);
+            subjectRepository.save(subject);
+        }
+        return subject;
+    }
+
+    @Transactional
+    public Subject removeAuthor(UUID subjectId, UUID userId) {
+        Subject subject = findSubject(subjectId);
+        subject.getAuthors().removeIf(a -> a.getId().equals(userId));
+        subjectRepository.save(subject);
+        return subject;
     }
 
     public void deleteSubject(UUID subjectId) {

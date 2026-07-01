@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.crosswords.domain.dto.request;
 
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -14,5 +15,7 @@ public class CrosswordStateRequest {
     private UUID crosswordId;
 
     private int numberOfWords;
+
+    private List<UUID> tagFilter;
 
 }

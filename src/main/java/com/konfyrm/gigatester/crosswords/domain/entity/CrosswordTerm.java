@@ -1,10 +1,13 @@
 package com.konfyrm.gigatester.crosswords.domain.entity;
 
 import com.konfyrm.gigatester.crosswords.domain.entity.enums.ClueType;
+import com.konfyrm.gigatester.tags.entity.Tag;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -28,5 +31,14 @@ public class CrosswordTerm {
     private String clue;
 
     private ClueType clueType;
+
+    @ManyToMany
+    @JoinTable(
+        name = "crossword_term_tags",
+        joinColumns = @JoinColumn(name = "term_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    @Builder.Default
+    private List<Tag> tags = new ArrayList<>();
 
 }

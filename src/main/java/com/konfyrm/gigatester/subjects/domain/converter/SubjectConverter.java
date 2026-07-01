@@ -9,6 +9,8 @@ import com.konfyrm.gigatester.subjects.domain.dto.response.SubjectsResponse;
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
 import com.konfyrm.gigatester.tests.repository.TestRepository;
+import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -59,6 +61,18 @@ public class SubjectConverter {
                 .crosswords(crosswordIds)
                 .comments(subject.getComments() == null ? List.of() :
                         subject.getComments().stream().map(c -> commentService.toResponse(c, currentUserId)).toList())
+                .authors(subject.getAuthors() == null ? List.of() :
+                        subject.getAuthors().stream().map(this::toAuthorResponse).toList())
+                .build();
+    }
+
+    private UserResponse toAuthorResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .role(user.getRole())
+                .profilePictureUrl(user.getProfilePictureUrl())
+                .bio(user.getBio())
                 .build();
     }
 

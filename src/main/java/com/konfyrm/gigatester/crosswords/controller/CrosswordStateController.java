@@ -23,6 +23,16 @@ public interface CrosswordStateController {
     ResponseEntity<?> createCrosswordState(@RequestBody CrosswordStateRequest request,
                                            @AuthenticationPrincipal User user);
 
+    @PostMapping("api/v1/crossword-states/generate")
+    ResponseEntity<?> startGeneration(@RequestBody CrosswordStateRequest request,
+                                      @AuthenticationPrincipal User user);
+
+    @GetMapping("api/v1/crossword-states/jobs/{jobId}")
+    ResponseEntity<?> getJobStatus(@PathVariable("jobId") UUID jobId);
+
+    @DeleteMapping("api/v1/crossword-states/jobs/{jobId}")
+    ResponseEntity<?> cancelJob(@PathVariable("jobId") UUID jobId);
+
     @PutMapping("api/v1/crossword-states/{id}")
     ResponseEntity<?> updateCrosswordState(@PathVariable("id") UUID id,
                                            @RequestBody CrosswordStateUpdateRequest request,

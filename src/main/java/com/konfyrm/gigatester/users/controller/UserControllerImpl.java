@@ -51,6 +51,12 @@ public class UserControllerImpl implements UserController {
     }
 
     @Override
+    public ResponseEntity<UserResponse> updateBio(@AuthenticationPrincipal User user,
+                                                   java.util.Map<String, String> body) {
+        return ResponseEntity.ok(userService.updateBio(user, body.getOrDefault("bio", "")));
+    }
+
+    @Override
     public ResponseEntity<List<UserResponse>> findAll() {
         return ResponseEntity.ok(userService.findAll());
     }

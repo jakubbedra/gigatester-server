@@ -4,6 +4,7 @@ import com.konfyrm.gigatester.crosswords.domain.converter.CrosswordStateConverte
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateUpdateRequest;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
+import com.konfyrm.gigatester.crosswords.service.CrosswordGenerationJobStore;
 import com.konfyrm.gigatester.crosswords.service.CrosswordStateService;
 import com.konfyrm.gigatester.crosswords.service.CrosswordTurnService.TurnOutcome;
 import com.konfyrm.gigatester.users.domain.entity.User;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,9 +49,33 @@ public class CrosswordStateControllerImpl implements CrosswordStateController {
     }
 
     @Override
-    public ResponseEntity<?> updateCrosswordState(UUID id, CrosswordStateUpdateRequest request,
-                                                  @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> startGeneration(CrosswordStateRequest request, @AuthenticationPrincipal User user) {
+        UUID jobId = crosswordStateService.startAsyncGeneration(request, user);
+        return ResponseEntity.accepted().body(Map.of("jobId", jobId));
+    }
+
+    @Override
+    public ResponseEntity<?> getJobStatus(UUID jobId) {
+        CrosswordGenerationJobStore.JobResult result = crosswordStateService.getJobResult(jobId);
+        return ResponseEntity.ok(Map.of(
+                "status", result.status().name(),
+                "stateId", result.stateId() != null ? result.stateId().toString() : "",
+                "error", result.error() != null ? result.error() : ""
+        ));
+    }
+
+    @Override
+    public ResponseEntity<?> cancelJob(UUID jobId) {
+        crosswordStateService.cancelJob(jobId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<?> updateCrosswordState(
+            UUID id, CrosswordStateUpdateRequest request, @AuthenticationPrincipal User user
+    ) {
         TurnOutcome outcome = crosswordStateService.updateCrosswordState(id, request, user.getId());
         return ResponseEntity.ok(crosswordStateConverter.toResponse(outcome.state(), outcome.result()));
     }
+
 }

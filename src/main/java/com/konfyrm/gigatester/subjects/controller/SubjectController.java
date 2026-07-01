@@ -25,4 +25,14 @@ public interface SubjectController {
     @DeleteMapping("api/v1/subjects/{subjectId}")
     ResponseEntity<?> deleteSubject(@PathVariable("subjectId") UUID subjectId);
 
+    @PostMapping("api/v1/subjects/{subjectId}/authors/{userId}")
+    ResponseEntity<?> addAuthor(@PathVariable("subjectId") UUID subjectId,
+                                @PathVariable("userId") UUID userId,
+                                @AuthenticationPrincipal User user);
+
+    @DeleteMapping("api/v1/subjects/{subjectId}/authors/{userId}")
+    ResponseEntity<?> removeAuthor(@PathVariable("subjectId") UUID subjectId,
+                                   @PathVariable("userId") UUID userId,
+                                   @AuthenticationPrincipal User user);
+
 }

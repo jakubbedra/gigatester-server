@@ -6,21 +6,38 @@ import com.konfyrm.gigatester.crosswords.domain.dto.response.CrosswordTermRespon
 import com.konfyrm.gigatester.crosswords.domain.dto.response.CrosswordsResponse;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTerm;
+import com.konfyrm.gigatester.tags.dto.TagResponse;
+import com.konfyrm.gigatester.tags.entity.Tag;
+import com.konfyrm.gigatester.tags.repository.TagRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class CrosswordConverter {
 
+    private final TagRepository tagRepository;
+
+    @Autowired
+    public CrosswordConverter(TagRepository tagRepository) {
+        this.tagRepository = tagRepository;
+    }
+
     public Crossword toEntity(CrosswordRequest request) {
         List<CrosswordTerm> terms = request.getTerms() == null ? List.of() :
                 request.getTerms().stream()
-                        .map(t -> CrosswordTerm.builder()
-                                .term(t.getTerm())
-                                .clue(t.getClue())
-                                .clueType(t.getClueType())
-                                .build())
+                        .map(t -> {
+                            List<Tag> tags = resolveTags(t.getTagIds());
+                            return CrosswordTerm.builder()
+                                    .term(t.getTerm())
+                                    .clue(t.getClue())
+                                    .clueType(t.getClueType())
+                                    .tags(tags)
+                                    .build();
+                        })
                         .toList();
 
         return Crossword.builder()
@@ -37,6 +54,7 @@ public class CrosswordConverter {
                                 .term(t.getTerm())
                                 .clue(t.getClue())
                                 .clueType(t.getClueType())
+                                .tags(toTagResponses(t.getTags()))
                                 .build())
                         .toList();
 
@@ -57,4 +75,15 @@ public class CrosswordConverter {
                 .toList());
     }
 
+    private List<Tag> resolveTags(List<UUID> tagIds) {
+        if (tagIds == null || tagIds.isEmpty()) return new ArrayList<>();
+        return new ArrayList<>(tagRepository.findAllById(tagIds));
+    }
+
+    private List<TagResponse> toTagResponses(List<Tag> tags) {
+        if (tags == null) return List.of();
+        return tags.stream()
+                .map(tag -> TagResponse.builder().id(tag.getId()).key(tag.getKey()).build())
+                .toList();
+    }
 }

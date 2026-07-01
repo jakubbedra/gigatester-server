@@ -16,30 +16,42 @@ import java.util.*;
 public class CrosswordGeneratorService {
 
     private static final int MAX_GRID_SIZE = 25;
+    private static final long TIME_LIMIT_MS = 4_000;
+    private static final int MAX_RETRIES = 3;
 
     record Placement(CrosswordTerm term, int row, int col, Direction direction, int intersections) {}
 
     public CrosswordState generate(Crossword crossword, int numberOfWords) {
-        List<CrosswordTerm> terms = crossword.getTerms();
+        return generate(crossword, crossword.getTerms(), numberOfWords);
+    }
+
+    public CrosswordState generate(Crossword crossword, List<CrosswordTerm> terms, int numberOfWords) {
         if (terms == null || terms.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Crossword has no terms");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Crossword has no terms matching the selected tags");
         }
 
-        List<CrosswordTerm> selected = new ArrayList<>(terms);
-        Collections.shuffle(selected);
-        selected = new ArrayList<>(selected.subList(0, Math.min(numberOfWords, selected.size())));
-        selected.sort(Comparator.comparingInt(t -> -t.getTerm().length()));
+        List<CrosswordTerm> pool = new ArrayList<>(terms);
 
-        int gridSize = computeGridSize(selected);
-        char[][] grid = new char[gridSize][gridSize];
-        for (char[] row : grid) Arrays.fill(row, CrosswordState.INACTIVE_FIELD);
+        for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            Collections.shuffle(pool);
+            List<CrosswordTerm> selected = new ArrayList<>(pool.subList(0, Math.min(numberOfWords, pool.size())));
+            selected.sort(Comparator.comparingInt(t -> -t.getTerm().length()));
 
-        List<Placement> placed = new ArrayList<>();
-        if (!backtrack(selected, 0, grid, gridSize, placed)) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not generate a crossword layout for the given terms");
+            int gridSize = computeGridSize(selected);
+            char[][] grid = new char[gridSize][gridSize];
+            for (char[] row : grid) Arrays.fill(row, CrosswordState.INACTIVE_FIELD);
+
+            Map<Character, List<int[]>> letterIndex = new HashMap<>();
+            List<Placement> placed = new ArrayList<>();
+            long deadline = System.currentTimeMillis() + TIME_LIMIT_MS;
+
+            if (backtrack(selected, 0, grid, gridSize, placed, letterIndex, deadline)) {
+                return buildState(crossword, grid, gridSize, placed);
+            }
         }
 
-        return buildState(crossword, grid, gridSize, placed);
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Could not generate a crossword layout for the given terms after " + MAX_RETRIES + " attempts");
     }
 
     private int computeGridSize(List<CrosswordTerm> terms) {
@@ -49,8 +61,10 @@ public class CrosswordGeneratorService {
         return Math.min(Math.max(maxLen + 4, estimated), MAX_GRID_SIZE);
     }
 
-    private boolean backtrack(List<CrosswordTerm> terms, int index, char[][] grid, int size, List<Placement> placed) {
+    private boolean backtrack(List<CrosswordTerm> terms, int index, char[][] grid, int size,
+                              List<Placement> placed, Map<Character, List<int[]>> letterIndex, long deadline) {
         if (index == terms.size()) return true;
+        if (System.currentTimeMillis() > deadline) return false;
 
         CrosswordTerm term = terms.get(index);
         String word = term.getTerm().toUpperCase();
@@ -62,35 +76,68 @@ public class CrosswordGeneratorService {
             int col = (size - word.length()) / 2;
             candidates = List.of(new Placement(term, row, col, Direction.ACROSS, 0));
         } else {
-            candidates = new ArrayList<>();
-            for (Direction dir : Direction.values()) {
-                for (int r = 0; r < size; r++) {
-                    for (int c = 0; c < size; c++) {
-                        if (isValidPlacement(grid, word, r, c, dir, size)) {
-                            int intersections = countIntersections(grid, word, r, c, dir, size);
-                            candidates.add(new Placement(term, r, c, dir, intersections));
-                        }
-                    }
-                }
-            }
-            candidates = candidates.stream()
-                    .filter(p -> p.intersections() > 0)
-                    .sorted(Comparator.comparingInt(p -> -p.intersections()))
-                    .toList();
+            candidates = findCandidates(grid, size, term, word, letterIndex);
         }
 
         for (Placement p : candidates) {
-            char[][] backup = copyGrid(grid, size);
-            placeWord(grid, word, p.row(), p.col(), p.direction());
+            List<int[]> newCells = new ArrayList<>();
+            placeWord(grid, word, p.row(), p.col(), p.direction(), newCells);
+            for (int[] cell : newCells) {
+                letterIndex.computeIfAbsent(grid[cell[0]][cell[1]], k -> new ArrayList<>()).add(cell);
+            }
             placed.add(p);
 
-            if (backtrack(terms, index + 1, grid, size, placed)) return true;
+            if (backtrack(terms, index + 1, grid, size, placed, letterIndex, deadline)) return true;
 
-            restoreGrid(grid, backup, size);
+            // Undo: remove newly placed cells from grid and index
+            for (int[] cell : newCells) {
+                char letter = grid[cell[0]][cell[1]];
+                List<int[]> positions = letterIndex.get(letter);
+                if (positions != null) {
+                    positions.removeIf(pos -> pos[0] == cell[0] && pos[1] == cell[1]);
+                }
+                grid[cell[0]][cell[1]] = CrosswordState.INACTIVE_FIELD;
+            }
             placed.remove(placed.size() - 1);
         }
 
         return false;
+    }
+
+    private List<Placement> findCandidates(char[][] grid, int size, CrosswordTerm term,
+                                           String word, Map<Character, List<int[]>> letterIndex) {
+        Set<String> seen = new HashSet<>();
+        List<Placement> candidates = new ArrayList<>();
+
+        for (int i = 0; i < word.length(); i++) {
+            char letter = word.charAt(i);
+            for (int[] pos : letterIndex.getOrDefault(letter, List.of())) {
+                int r = pos[0], c = pos[1];
+
+                // ACROSS: word[i] lands at (r, c) → starts at (r, c-i)
+                int acrossCol = c - i;
+                String acrossKey = r + "," + acrossCol + ",A";
+                if (!seen.contains(acrossKey) && isValidPlacement(grid, word, r, acrossCol, Direction.ACROSS, size)) {
+                    seen.add(acrossKey);
+                    candidates.add(new Placement(term, r, acrossCol, Direction.ACROSS,
+                            countIntersections(grid, word, r, acrossCol, Direction.ACROSS, size)));
+                }
+
+                // DOWN: word[i] lands at (r, c) → starts at (r-i, c)
+                int downRow = r - i;
+                String downKey = downRow + "," + c + ",D";
+                if (!seen.contains(downKey) && isValidPlacement(grid, word, downRow, c, Direction.DOWN, size)) {
+                    seen.add(downKey);
+                    candidates.add(new Placement(term, downRow, c, Direction.DOWN,
+                            countIntersections(grid, word, downRow, c, Direction.DOWN, size)));
+                }
+            }
+        }
+
+        return candidates.stream()
+                .filter(p -> p.intersections() > 0)
+                .sorted(Comparator.comparingInt(p -> -p.intersections()))
+                .toList();
     }
 
     private boolean isValidPlacement(char[][] grid, String word, int row, int col, Direction dir, int size) {
@@ -103,11 +150,9 @@ public class CrosswordGeneratorService {
 
         if (row < 0 || col < 0 || endRow >= size || endCol >= size) return false;
 
-        // Cell immediately before the word must be empty
         int preRow = row - dr, preCol = col - dc;
         if (preRow >= 0 && preCol >= 0 && grid[preRow][preCol] != CrosswordState.INACTIVE_FIELD) return false;
 
-        // Cell immediately after the word must be empty
         int postRow = row + dr * len, postCol = col + dc * len;
         if (postRow < size && postCol < size && grid[postRow][postCol] != CrosswordState.INACTIVE_FIELD) return false;
 
@@ -119,9 +164,7 @@ public class CrosswordGeneratorService {
 
             if (existing != CrosswordState.INACTIVE_FIELD) {
                 if (existing != letter) return false;
-                // Valid intersection — no adjacency check needed for this cell
             } else {
-                // Empty cell — adjacent perpendicular cells must be empty to avoid merging words
                 if (dir == Direction.ACROSS) {
                     if (r > 0 && grid[r - 1][c] != CrosswordState.INACTIVE_FIELD) return false;
                     if (r < size - 1 && grid[r + 1][c] != CrosswordState.INACTIVE_FIELD) return false;
@@ -150,34 +193,21 @@ public class CrosswordGeneratorService {
         return count;
     }
 
-    private void placeWord(char[][] grid, String word, int row, int col, Direction dir) {
+    private void placeWord(char[][] grid, String word, int row, int col, Direction dir, List<int[]> newCells) {
         int dr = dir == Direction.DOWN ? 1 : 0;
         int dc = dir == Direction.ACROSS ? 1 : 0;
         for (int i = 0; i < word.length(); i++) {
-            grid[row + dr * i][col + dc * i] = word.charAt(i);
+            int r = row + dr * i;
+            int c = col + dc * i;
+            if (grid[r][c] == CrosswordState.INACTIVE_FIELD) {
+                grid[r][c] = word.charAt(i);
+                newCells.add(new int[]{r, c});
+            }
+            // If already filled (intersection), don't record — we won't undo it
         }
-    }
-
-    private char[][] copyGrid(char[][] grid, int size) {
-        char[][] copy = new char[size][size];
-        for (int i = 0; i < size; i++) copy[i] = Arrays.copyOf(grid[i], size);
-        return copy;
-    }
-
-    private void restoreGrid(char[][] grid, char[][] backup, int size) {
-        for (int i = 0; i < size; i++) System.arraycopy(backup[i], 0, grid[i], 0, size);
-    }
-
-    private String drawHand(List<Character> pool, int offset) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = offset; i < Math.min(offset + 5, pool.size()); i++) {
-            sb.append(pool.get(i));
-        }
-        return sb.toString();
     }
 
     private CrosswordState buildState(Crossword crossword, char[][] grid, int size, List<Placement> placed) {
-        // Find bounding box and crop grid
         int minRow = size, maxRow = 0, minCol = size, maxCol = 0;
         for (int r = 0; r < size; r++) {
             for (int c = 0; c < size; c++) {
@@ -247,4 +277,11 @@ public class CrosswordGeneratorService {
                 .build();
     }
 
+    private String drawHand(List<Character> pool, int offset) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = offset; i < Math.min(offset + 5, pool.size()); i++) {
+            sb.append(pool.get(i));
+        }
+        return sb.toString();
+    }
 }

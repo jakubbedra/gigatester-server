@@ -5,9 +5,12 @@ import com.konfyrm.gigatester.subjects.domain.dto.request.SubjectRequest;
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
 import com.konfyrm.gigatester.subjects.service.SubjectService;
 import com.konfyrm.gigatester.users.domain.entity.User;
+import com.konfyrm.gigatester.users.domain.entity.UserRole;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
@@ -52,6 +55,26 @@ public class SubjectControllerImpl implements SubjectController {
     public ResponseEntity<?> deleteSubject(UUID subjectId) {
         subjectService.deleteSubject(subjectId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<?> addAuthor(UUID subjectId, UUID userId, @AuthenticationPrincipal User user) {
+        requireModerator(user);
+        Subject subject = subjectService.addAuthor(subjectId, userId);
+        return ResponseEntity.ok(subjectConverter.toResponse(subject, user.getId()));
+    }
+
+    @Override
+    public ResponseEntity<?> removeAuthor(UUID subjectId, UUID userId, @AuthenticationPrincipal User user) {
+        requireModerator(user);
+        Subject subject = subjectService.removeAuthor(subjectId, userId);
+        return ResponseEntity.ok(subjectConverter.toResponse(subject, user.getId()));
+    }
+
+    private void requireModerator(User user) {
+        if (user == null || (user.getRole() != UserRole.MODERATOR && user.getRole() != UserRole.ADMIN)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
     }
 
 }

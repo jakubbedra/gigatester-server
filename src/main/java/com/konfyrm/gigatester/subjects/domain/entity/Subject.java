@@ -3,6 +3,7 @@ package com.konfyrm.gigatester.subjects.domain.entity;
 import com.konfyrm.gigatester.comments.domain.entity.Comment;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -41,5 +42,12 @@ public class Subject {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments;
+
+    @ManyToMany
+    @JoinTable(name = "subject_authors",
+        joinColumns = @JoinColumn(name = "subject_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @Builder.Default
+    private List<User> authors = new java.util.ArrayList<>();
 
 }

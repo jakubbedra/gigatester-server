@@ -1,6 +1,7 @@
 package com.konfyrm.gigatester.subjects.domain.dto.response;
 
 import com.konfyrm.gigatester.comments.domain.dto.response.CommentResponse;
+import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import lombok.*;
 
 import java.util.List;
@@ -26,5 +27,7 @@ public class SubjectResponse {
     private List<UUID> crosswords;
 
     private List<CommentResponse> comments;
+
+    private List<UserResponse> authors;
 
 }

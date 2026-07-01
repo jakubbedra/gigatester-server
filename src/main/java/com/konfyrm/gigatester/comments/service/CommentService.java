@@ -108,6 +108,7 @@ public class CommentService {
                 comment.getResponses().stream().map(r -> toResponse(r, currentUserId)).toList();
         return CommentResponse.builder()
                 .id(comment.getId())
+                .authorId(comment.getUser().getId())
                 .authorUsername(comment.getUser().getUsername())
                 .authorAvatarUrl(comment.getUser().getProfilePictureUrl())
                 .content(comment.getContent())
