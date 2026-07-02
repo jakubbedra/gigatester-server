@@ -36,7 +36,6 @@ public class User implements UserDetails {
     @Column
     private String profilePictureUrl;
 
-    @Lob
     @Column(columnDefinition = "text")
     private String bio;
 
