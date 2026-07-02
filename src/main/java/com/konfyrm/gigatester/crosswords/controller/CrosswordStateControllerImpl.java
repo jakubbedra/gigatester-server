@@ -8,6 +8,7 @@ import com.konfyrm.gigatester.crosswords.service.CrosswordGenerationJobStore;
 import com.konfyrm.gigatester.crosswords.service.CrosswordStateService;
 import com.konfyrm.gigatester.crosswords.service.CrosswordTurnService.TurnOutcome;
 import com.konfyrm.gigatester.users.domain.entity.User;
+import jakarta.annotation.Nonnull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,8 +25,10 @@ public class CrosswordStateControllerImpl implements CrosswordStateController {
     private final CrosswordStateConverter crosswordStateConverter;
 
     @Autowired
-    public CrosswordStateControllerImpl(CrosswordStateService crosswordStateService,
-                                        CrosswordStateConverter crosswordStateConverter) {
+    public CrosswordStateControllerImpl(
+            @Nonnull CrosswordStateService crosswordStateService,
+            @Nonnull CrosswordStateConverter crosswordStateConverter
+    ) {
         this.crosswordStateService = crosswordStateService;
         this.crosswordStateConverter = crosswordStateConverter;
     }
