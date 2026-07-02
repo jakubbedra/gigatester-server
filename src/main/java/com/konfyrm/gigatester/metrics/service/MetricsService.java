@@ -1,18 +1,22 @@
 package com.konfyrm.gigatester.metrics.service;
 
-import com.konfyrm.gigatester.metrics.domain.dto.DailyStatDto;
-import com.konfyrm.gigatester.metrics.domain.dto.ProgressResponse;
-import com.konfyrm.gigatester.metrics.domain.dto.RankingEntryDto;
+import com.konfyrm.gigatester.metrics.domain.dto.*;
 import com.konfyrm.gigatester.metrics.domain.entity.UserQuestionStat;
 import com.konfyrm.gigatester.metrics.domain.entity.UserTestStat;
+import com.konfyrm.gigatester.metrics.repository.DailyStreakRepository;
 import com.konfyrm.gigatester.metrics.repository.UserQuestionStatRepository;
 import com.konfyrm.gigatester.metrics.repository.UserTestStatRepository;
+import com.konfyrm.gigatester.tags.entity.Tag;
 import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
+import com.konfyrm.gigatester.tests.domain.entity.Test;
 import com.konfyrm.gigatester.tests.domain.entity.TestState;
+import com.konfyrm.gigatester.tests.repository.TestRepository;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,14 +28,20 @@ public class MetricsService {
 
     private final UserTestStatRepository testStatRepository;
     private final UserQuestionStatRepository questionStatRepository;
+    private final DailyStreakRepository dailyStreakRepository;
+    private final TestRepository testRepository;
 
     @Autowired
     public MetricsService(
             UserTestStatRepository testStatRepository,
-            UserQuestionStatRepository questionStatRepository
+            UserQuestionStatRepository questionStatRepository,
+            DailyStreakRepository dailyStreakRepository,
+            TestRepository testRepository
     ) {
         this.testStatRepository = testStatRepository;
         this.questionStatRepository = questionStatRepository;
+        this.dailyStreakRepository = dailyStreakRepository;
+        this.testRepository = testRepository;
     }
 
     @Transactional
@@ -69,8 +79,11 @@ public class MetricsService {
         }
     }
 
-    public ProgressResponse getProgress(User user) {
-        List<UserTestStat> stats = testStatRepository.findByUser_Id(user.getId());
+    public ProgressResponse getProgress(User user, UUID testId) {
+        List<UserTestStat> stats = testId != null
+                ? testStatRepository.findByUser_IdAndTest_Id(user.getId(), testId)
+                : testStatRepository.findByUser_Id(user.getId());
+
         int totalTestsTaken = stats.size();
         int totalTestsPassed = (int) stats.stream().filter(UserTestStat::isPassed).count();
         int totalQuestionsAnswered = stats.stream().mapToInt(UserTestStat::getTotalQuestions).sum();
@@ -89,41 +102,113 @@ public class MetricsService {
                         .build())
                 .collect(Collectors.toList());
 
+        // Distinct tests taken by this user for the filter dropdown
+        List<TestSummaryForMetricsDto> myTests = testStatRepository.findByUser_Id(user.getId()).stream()
+                .map(UserTestStat::getTest)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Test::getId, t -> t, (a, b) -> a))
+                .values().stream()
+                .map(t -> TestSummaryForMetricsDto.builder().id(t.getId()).name(t.getName()).build())
+                .sorted(Comparator.comparing(TestSummaryForMetricsDto::getName))
+                .collect(Collectors.toList());
+
+        List<TagAccuracyDto> tagStats = testId != null ? getTagStats(user, testId) : List.of();
+
         return ProgressResponse.builder()
                 .totalTestsTaken(totalTestsTaken)
                 .totalTestsPassed(totalTestsPassed)
                 .totalQuestionsAnswered(totalQuestionsAnswered)
                 .totalQuestionsCorrect(totalQuestionsCorrect)
                 .dailyStats(dailyStats)
+                .myTests(myTests)
+                .tagStats(tagStats)
                 .build();
     }
 
-    public List<RankingEntryDto> getRanking() {
-        List<UserTestStat> allStats = testStatRepository.findAll();
+    public List<TagAccuracyDto> getTagStats(User user, UUID testId) {
+        Test test = testRepository.findById(testId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        List<UUID> questionIds = test.getQuestions().stream()
+                .map(q -> q.getId())
+                .collect(Collectors.toList());
+        if (questionIds.isEmpty()) return List.of();
+
+        List<UserQuestionStat> qStats = questionStatRepository
+                .findByUser_IdAndQuestion_IdIn(user.getId(), questionIds);
+
+        // Group accuracy by tag
+        Map<UUID, int[]> tagAcc = new LinkedHashMap<>(); // [timesAnswered, timesCorrect]
+        Map<UUID, String> tagKeys = new LinkedHashMap<>();
+        for (UserQuestionStat qs : qStats) {
+            for (Tag tag : qs.getQuestion().getTags()) {
+                tagAcc.computeIfAbsent(tag.getId(), k -> new int[2]);
+                tagKeys.put(tag.getId(), tag.getKey());
+                tagAcc.get(tag.getId())[0] += qs.getTimesAnswered();
+                tagAcc.get(tag.getId())[1] += qs.getTimesCorrect();
+            }
+        }
+
+        return tagAcc.entrySet().stream()
+                .map(e -> {
+                    int answered = e.getValue()[0];
+                    int correct = e.getValue()[1];
+                    return TagAccuracyDto.builder()
+                            .tagId(e.getKey())
+                            .tagKey(tagKeys.get(e.getKey()))
+                            .timesAnswered(answered)
+                            .timesCorrect(correct)
+                            .accuracy(answered > 0 ? (double) correct / answered * 100.0 : 0.0)
+                            .build();
+                })
+                .sorted(Comparator.comparingDouble(TagAccuracyDto::getAccuracy))
+                .collect(Collectors.toList());
+    }
+
+    public List<RankingEntryDto> getRanking(UUID testId, String sortBy) {
+        List<UserTestStat> allStats = testId != null
+                ? testStatRepository.findByTest_Id(testId)
+                : testStatRepository.findAll();
+
+        // Pre-load all streaks keyed by userId
+        Map<UUID, Integer> streakMap = dailyStreakRepository.findAll().stream()
+                .collect(Collectors.toMap(s -> s.getUser().getId(), s -> s.getCurrentStreak()));
+
         List<RankingEntryDto> ranking = allStats.stream()
                 .collect(Collectors.groupingBy(s -> s.getUser().getId()))
                 .values().stream()
                 .map(userStats -> {
+                    User u = userStats.get(0).getUser();
                     int taken = userStats.size();
                     int passed = (int) userStats.stream().filter(UserTestStat::isPassed).count();
                     int correct = userStats.stream().mapToInt(UserTestStat::getCorrectQuestions).sum();
                     double passRate = taken > 0 ? (double) passed / taken * 100.0 : 0.0;
+                    int streak = streakMap.getOrDefault(u.getId(), 0);
                     return RankingEntryDto.builder()
-                            .username(userStats.get(0).getUser().getUsername())
+                            .userId(u.getId().toString())
+                            .username(u.getUsername())
                             .totalTestsTaken(taken)
                             .totalTestsPassed(passed)
                             .passRate(passRate)
                             .totalQuestionsCorrect(correct)
+                            .currentStreak(streak)
                             .build();
                 })
-                .sorted(Comparator.comparingDouble(RankingEntryDto::getPassRate).reversed()
-                        .thenComparing(Comparator.comparingInt(RankingEntryDto::getTotalQuestionsCorrect).reversed()))
+                .sorted(comparatorFor(sortBy))
                 .collect(Collectors.toList());
 
         for (int i = 0; i < ranking.size(); i++) {
             ranking.get(i).setRank(i + 1);
         }
         return ranking;
+    }
+
+    private Comparator<RankingEntryDto> comparatorFor(String sortBy) {
+        return switch (sortBy == null ? "accuracy" : sortBy) {
+            case "streak" -> Comparator.comparingInt(RankingEntryDto::getCurrentStreak).reversed();
+            case "points" -> Comparator.comparingInt(RankingEntryDto::getTotalQuestionsCorrect).reversed();
+            default -> Comparator.comparingDouble(RankingEntryDto::getPassRate).reversed()
+                    .thenComparing(Comparator.comparingInt(RankingEntryDto::getTotalQuestionsCorrect).reversed());
+        };
     }
 
     /**

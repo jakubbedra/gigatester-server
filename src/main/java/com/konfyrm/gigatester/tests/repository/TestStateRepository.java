@@ -12,4 +12,6 @@ public interface TestStateRepository extends JpaRepository<TestState, UUID> {
 
     Optional<TestState> findFirstByTest_IdAndUser_Id(UUID testId, UUID userId);
 
+    void deleteByUser_Id(UUID userId);
+
 }

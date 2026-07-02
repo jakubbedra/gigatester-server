@@ -12,4 +12,7 @@ import java.util.UUID;
 public interface UserQuestionStatRepository extends JpaRepository<UserQuestionStat, UUID> {
     Optional<UserQuestionStat> findByUser_IdAndQuestion_Id(UUID userId, UUID questionId);
     List<UserQuestionStat> findByUser_IdAndQuestion_IdIn(UUID userId, List<UUID> questionIds);
+    List<UserQuestionStat> findByUser_Id(UUID userId);
+
+    void deleteByUser_Id(UUID userId);
 }

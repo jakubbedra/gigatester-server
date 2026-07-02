@@ -10,4 +10,6 @@ public interface CrosswordStateRepository extends JpaRepository<CrosswordState, 
 
     Optional<CrosswordState> findFirstByCrossword_IdAndUser_Id(UUID crosswordId, UUID userId);
 
+    void deleteByUser_Id(UUID userId);
+
 }
