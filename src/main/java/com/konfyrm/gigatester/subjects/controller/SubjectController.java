@@ -35,4 +35,8 @@ public interface SubjectController {
                                    @PathVariable("userId") UUID userId,
                                    @AuthenticationPrincipal User user);
 
+    @GetMapping("api/v1/subjects/{subjectId}/author-candidates")
+    ResponseEntity<?> getAuthorCandidates(@PathVariable("subjectId") UUID subjectId,
+                                          @AuthenticationPrincipal User user);
+
 }
