@@ -1,9 +1,11 @@
 package com.konfyrm.gigatester.tests.domain.entity;
 
 import com.konfyrm.gigatester.questions.domain.entity.Question;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,5 +35,12 @@ public class Test {
 
     @Column(columnDefinition = "bigint default 0")
     private long timeLimit;
+
+    @ManyToMany
+    @JoinTable(name = "test_authors",
+        joinColumns = @JoinColumn(name = "test_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @Builder.Default
+    private List<User> authors = new ArrayList<>();
 
 }

@@ -4,6 +4,8 @@ import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTerm;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordStateTermRepository;
+import com.konfyrm.gigatester.users.domain.entity.User;
+import com.konfyrm.gigatester.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,11 +21,14 @@ public class CrosswordService {
 
     private final CrosswordRepository crosswordRepository;
     private final CrosswordStateTermRepository crosswordStateTermRepository;
+    private final UserRepository userRepository;
 
     public CrosswordService(CrosswordRepository crosswordRepository,
-                            CrosswordStateTermRepository crosswordStateTermRepository) {
+                            CrosswordStateTermRepository crosswordStateTermRepository,
+                            UserRepository userRepository) {
         this.crosswordRepository = crosswordRepository;
         this.crosswordStateTermRepository = crosswordStateTermRepository;
+        this.userRepository = userRepository;
     }
 
     public Crossword addCrossword(Crossword crossword) {
@@ -81,6 +86,26 @@ public class CrosswordService {
         }
 
         crosswordRepository.save(existing);
+    }
+
+    @Transactional
+    public Crossword addAuthor(UUID crosswordId, UUID userId) {
+        Crossword crossword = findCrossword(crosswordId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (crossword.getAuthors().stream().noneMatch(a -> a.getId().equals(userId))) {
+            crossword.getAuthors().add(user);
+            crosswordRepository.save(crossword);
+        }
+        return crossword;
+    }
+
+    @Transactional
+    public Crossword removeAuthor(UUID crosswordId, UUID userId) {
+        Crossword crossword = findCrossword(crosswordId);
+        crossword.getAuthors().removeIf(a -> a.getId().equals(userId));
+        crosswordRepository.save(crossword);
+        return crossword;
     }
 
     public void deleteCrossword(UUID id) {

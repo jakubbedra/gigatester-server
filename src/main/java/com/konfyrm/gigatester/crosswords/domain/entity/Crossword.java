@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.crosswords.domain.entity;
 
+import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,5 +25,12 @@ public class Crossword {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CrosswordTerm> terms;
+
+    @ManyToMany
+    @JoinTable(name = "crossword_authors",
+        joinColumns = @JoinColumn(name = "crossword_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @Builder.Default
+    private List<User> authors = new ArrayList<>();
 
 }

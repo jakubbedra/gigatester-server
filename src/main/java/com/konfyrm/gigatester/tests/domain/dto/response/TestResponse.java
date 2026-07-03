@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.tests.domain.dto.response;
 
+import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import lombok.*;
 
 import java.util.List;
@@ -29,5 +30,7 @@ public class TestResponse {
     private double passingPercentage;
 
     private long timeLimit;
+
+    private List<UserResponse> authors;
 
 }

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+
 public interface TestController {
 
     @PostMapping("api/v1/tests")
@@ -33,5 +34,14 @@ public interface TestController {
             @RequestParam(value = "excludeTags", defaultValue = "false") boolean excludeTags,
             @AuthenticationPrincipal User user
     );
+
+    @PutMapping("api/v1/tests/{testId}/authors/{userId}")
+    ResponseEntity<?> addAuthor(@PathVariable("testId") UUID testId, @PathVariable("userId") UUID userId, @AuthenticationPrincipal User user);
+
+    @DeleteMapping("api/v1/tests/{testId}/authors/{userId}")
+    ResponseEntity<?> removeAuthor(@PathVariable("testId") UUID testId, @PathVariable("userId") UUID userId, @AuthenticationPrincipal User user);
+
+    @GetMapping("api/v1/tests/{testId}/author-candidates")
+    ResponseEntity<?> getAuthorCandidates(@PathVariable("testId") UUID testId, @AuthenticationPrincipal User user);
 
 }

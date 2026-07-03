@@ -2,20 +2,25 @@ package com.konfyrm.gigatester.tests.controller;
 
 import com.konfyrm.gigatester.common.domain.TesterEntityType;
 import com.konfyrm.gigatester.questions.repository.QuestionRepository;
+import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroupAccessStatus;
+import com.konfyrm.gigatester.subjects.repository.SubjectGroupAccessRepository;
+import com.konfyrm.gigatester.subjects.repository.SubjectGroupRepository;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.tests.domain.converter.TestConverter;
 import com.konfyrm.gigatester.tests.domain.dto.request.TestRequest;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
 import com.konfyrm.gigatester.tests.service.TestService;
+import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import com.konfyrm.gigatester.users.domain.entity.User;
+import com.konfyrm.gigatester.users.domain.entity.UserRole;
+import com.konfyrm.gigatester.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 public class TestControllerImpl implements TestController {
@@ -24,13 +29,22 @@ public class TestControllerImpl implements TestController {
     private final TestConverter testConverter;
     private final QuestionRepository questionRepository;
     private final SubjectGroupAccessService accessService;
+    private final SubjectGroupRepository subjectGroupRepository;
+    private final SubjectGroupAccessRepository subjectGroupAccessRepository;
+    private final UserRepository userRepository;
 
     public TestControllerImpl(TestService testService, TestConverter testConverter,
-                              QuestionRepository questionRepository, SubjectGroupAccessService accessService) {
+                              QuestionRepository questionRepository, SubjectGroupAccessService accessService,
+                              SubjectGroupRepository subjectGroupRepository,
+                              SubjectGroupAccessRepository subjectGroupAccessRepository,
+                              UserRepository userRepository) {
         this.testService = testService;
         this.testConverter = testConverter;
         this.questionRepository = questionRepository;
         this.accessService = accessService;
+        this.subjectGroupRepository = subjectGroupRepository;
+        this.subjectGroupAccessRepository = subjectGroupAccessRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -92,6 +106,52 @@ public class TestControllerImpl implements TestController {
                 "openQuestionsCount", open,
                 "statementQuestionsCount", statement
         ));
+    }
+
+    @Override
+    public ResponseEntity<?> addAuthor(UUID testId, UUID userId, User user) {
+        requireModerator(user);
+        Test test = testService.addAuthor(testId, userId);
+        return ResponseEntity.ok(testConverter.toResponse(test));
+    }
+
+    @Override
+    public ResponseEntity<?> removeAuthor(UUID testId, UUID userId, User user) {
+        requireModerator(user);
+        Test test = testService.removeAuthor(testId, userId);
+        return ResponseEntity.ok(testConverter.toResponse(test));
+    }
+
+    @Override
+    public ResponseEntity<?> getAuthorCandidates(UUID testId, User user) {
+        requireModerator(user);
+        Test test = testService.findTest(testId);
+        Set<UUID> alreadyAuthors = test.getAuthors().stream().map(User::getId).collect(Collectors.toSet());
+
+        Set<UUID> candidateIds = new LinkedHashSet<>();
+        subjectGroupRepository.findByTests_Id(testId).forEach(group ->
+            subjectGroupAccessRepository.findBySubjectGroup_IdAndStatus(group.getId(), SubjectGroupAccessStatus.APPROVED)
+                .forEach(req -> candidateIds.add(req.getUser().getId()))
+        );
+        userRepository.findAll().stream()
+                .filter(u -> u.getRole() == UserRole.MODERATOR || u.getRole() == UserRole.ADMIN)
+                .map(User::getId).forEach(candidateIds::add);
+
+        List<UserResponse> candidates = candidateIds.stream()
+                .filter(id -> !alreadyAuthors.contains(id))
+                .map(id -> userRepository.findById(id).orElse(null))
+                .filter(Objects::nonNull)
+                .map(u -> UserResponse.builder().id(u.getId()).username(u.getUsername())
+                        .role(u.getRole()).profilePictureUrl(u.getProfilePictureUrl()).build())
+                .sorted(Comparator.comparing(UserResponse::getUsername))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(candidates);
+    }
+
+    private void requireModerator(User user) {
+        if (user == null || (user.getRole() != UserRole.MODERATOR && user.getRole() != UserRole.ADMIN)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
     }
 
 }

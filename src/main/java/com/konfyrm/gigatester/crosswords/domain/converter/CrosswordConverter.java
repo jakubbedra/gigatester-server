@@ -9,6 +9,7 @@ import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTerm;
 import com.konfyrm.gigatester.tags.dto.TagResponse;
 import com.konfyrm.gigatester.tags.entity.Tag;
 import com.konfyrm.gigatester.tags.repository.TagRepository;
+import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -58,10 +59,17 @@ public class CrosswordConverter {
                                 .build())
                         .toList();
 
+        List<UserResponse> authors = crossword.getAuthors() == null ? List.of() :
+                crossword.getAuthors().stream()
+                        .map(u -> UserResponse.builder().id(u.getId()).username(u.getUsername())
+                                .role(u.getRole()).profilePictureUrl(u.getProfilePictureUrl()).build())
+                        .toList();
+
         return CrosswordResponse.builder()
                 .id(crossword.getId())
                 .name(crossword.getName())
                 .terms(terms)
+                .authors(authors)
                 .build();
     }
 

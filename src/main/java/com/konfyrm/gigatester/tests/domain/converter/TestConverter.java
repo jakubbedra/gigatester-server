@@ -8,6 +8,8 @@ import com.konfyrm.gigatester.tests.domain.dto.request.TestRequest;
 import com.konfyrm.gigatester.tests.domain.dto.response.TestResponse;
 import com.konfyrm.gigatester.tests.domain.dto.response.TestsResponse;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
+import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -47,6 +49,10 @@ public class TestConverter {
                 .storedOpenQuestionsCount((int) test.getQuestions().stream().filter(q -> q.getType() == TesterEntityType.OPEN_QUESTION).count())
                 .passingPercentage(test.getPassingPercentage())
                 .timeLimit(test.getTimeLimit())
+                .authors(test.getAuthors() == null ? List.of() : test.getAuthors().stream()
+                        .map(u -> UserResponse.builder().id(u.getId()).username(u.getUsername())
+                                .role(u.getRole()).profilePictureUrl(u.getProfilePictureUrl()).build())
+                        .toList())
                 .build();
     }
 

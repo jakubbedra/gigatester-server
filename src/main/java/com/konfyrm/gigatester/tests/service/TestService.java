@@ -3,6 +3,9 @@ package com.konfyrm.gigatester.tests.service;
 import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
 import com.konfyrm.gigatester.tests.repository.TestRepository;
+import com.konfyrm.gigatester.users.domain.entity.User;
+import com.konfyrm.gigatester.users.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,9 +19,11 @@ import java.util.UUID;
 public class TestService {
 
     private final TestRepository testRepository;
+    private final UserRepository userRepository;
 
-    public TestService(TestRepository testRepository) {
+    public TestService(TestRepository testRepository, UserRepository userRepository) {
         this.testRepository = testRepository;
+        this.userRepository = userRepository;
     }
 
     public Test addTest(Test test) {
@@ -54,6 +59,26 @@ public class TestService {
         List<Question> updated = new ArrayList<>(test.getQuestions());
         updated.addAll(questions);
         testRepository.save(test.toBuilder().questions(updated).build());
+    }
+
+    @Transactional
+    public Test addAuthor(UUID testId, UUID userId) {
+        Test test = findTest(testId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (test.getAuthors().stream().noneMatch(a -> a.getId().equals(userId))) {
+            test.getAuthors().add(user);
+            testRepository.save(test);
+        }
+        return test;
+    }
+
+    @Transactional
+    public Test removeAuthor(UUID testId, UUID userId) {
+        Test test = findTest(testId);
+        test.getAuthors().removeIf(a -> a.getId().equals(userId));
+        testRepository.save(test);
+        return test;
     }
 
     public void deleteTest(UUID testId) {

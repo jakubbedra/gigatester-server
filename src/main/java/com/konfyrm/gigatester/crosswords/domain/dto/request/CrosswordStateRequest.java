@@ -18,4 +18,6 @@ public class CrosswordStateRequest {
 
     private List<UUID> tagFilter;
 
+    private String tagFilterMode;
+
 }
