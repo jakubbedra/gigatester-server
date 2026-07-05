@@ -6,6 +6,8 @@ import com.konfyrm.gigatester.subjects.domain.dto.response.SubjectGroupsResponse
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
 import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroup;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
+import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +38,16 @@ public class SubjectGroupConverter {
                 .id(group.getId())
                 .name(group.getName())
                 .subjects(group.getTests().stream().map(Subject::getId).toList())
+                .owners(group.getOwners().stream().map(this::toUserResponse).toList())
+                .build();
+    }
+
+    private UserResponse toUserResponse(User u) {
+        return UserResponse.builder()
+                .id(u.getId())
+                .username(u.getUsername())
+                .role(u.getRole())
+                .profilePictureUrl(u.getProfilePictureUrl())
                 .build();
     }
 

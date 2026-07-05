@@ -6,6 +6,8 @@ import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroup;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupService;
 import com.konfyrm.gigatester.users.domain.entity.User;
+import com.konfyrm.gigatester.users.domain.entity.UserRole;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -70,29 +72,57 @@ public class SubjectGroupControllerImpl implements SubjectGroupController {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> getAccessRequests(UUID id) {
+    public ResponseEntity<?> getAccessRequests(UUID id, @AuthenticationPrincipal User user) {
+        if (user.getRole() != UserRole.ADMIN && !subjectGroupService.isOwner(id, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(accessService.getAccessRequestsForGroup(id));
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> approveRequest(UUID requestId) {
+    public ResponseEntity<?> approveRequest(UUID requestId, @AuthenticationPrincipal User user) {
+        if (user.getRole() != UserRole.ADMIN && !accessService.isOwnerOfRequest(requestId, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         accessService.approve(requestId);
         return ResponseEntity.ok().build();
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> denyRequest(UUID requestId) {
+    public ResponseEntity<?> denyRequest(UUID requestId, @AuthenticationPrincipal User user) {
+        if (user.getRole() != UserRole.ADMIN && !accessService.isOwnerOfRequest(requestId, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         accessService.deny(requestId);
         return ResponseEntity.ok().build();
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> revokeAccess(UUID requestId) {
+    public ResponseEntity<?> revokeAccess(UUID requestId, @AuthenticationPrincipal User user) {
+        if (user.getRole() != UserRole.ADMIN && !accessService.isOwnerOfRequest(requestId, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         accessService.revokeAccess(requestId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> addOwner(UUID id, UUID userId) {
+        SubjectGroup group = subjectGroupService.addOwner(id, userId);
+        return ResponseEntity.ok(subjectGroupConverter.toResponse(group));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> removeOwner(UUID id, UUID userId) {
+        SubjectGroup group = subjectGroupService.removeOwner(id, userId);
+        return ResponseEntity.ok(subjectGroupConverter.toResponse(group));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getOwnerCandidates(UUID id) {
+        return ResponseEntity.ok(subjectGroupService.getOwnerCandidates(id));
     }
 }

@@ -112,6 +112,12 @@ public class SubjectGroupAccessService {
         return false;
     }
 
+    public boolean isOwnerOfRequest(UUID requestId, UUID userId) {
+        return accessRepository.findById(requestId)
+                .map(r -> r.getSubjectGroup().getOwners().stream().anyMatch(u -> u.getId().equals(userId)))
+                .orElse(false);
+    }
+
     public boolean hasAccessToCrossword(UUID crosswordId, User user) {
         if (user.getRole() == UserRole.MODERATOR || user.getRole() == UserRole.ADMIN) return true;
         List<Subject> subjects = subjectRepository.findByCrosswords_Id(crosswordId);
