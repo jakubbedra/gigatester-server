@@ -119,16 +119,24 @@ public class CrosswordStateService {
         crosswordStateRepository.findFirstByCrossword_IdAndUser_Id(request.getCrosswordId(), user.getId())
                 .ifPresent(crosswordStateRepository::delete);
 
-        List<UUID> tagFilter = request.getTagFilter();
-        boolean excludeMode = "EXCLUDE".equalsIgnoreCase(request.getTagFilterMode());
-        List<CrosswordTerm> filteredTerms = (tagFilter == null || tagFilter.isEmpty())
-                ? crossword.getTerms()
-                : crossword.getTerms().stream()
-                        .filter(t -> {
-                            boolean hasTag = t.getTags() != null && t.getTags().stream().anyMatch(tag -> tagFilter.contains(tag.getId()));
-                            return excludeMode ? !hasTag : hasTag;
-                        })
-                        .collect(Collectors.toList());
+        List<UUID> termIdFilter = request.getTermIdFilter();
+        List<CrosswordTerm> filteredTerms;
+        if (termIdFilter != null && !termIdFilter.isEmpty()) {
+            filteredTerms = crossword.getTerms().stream()
+                    .filter(t -> termIdFilter.contains(t.getId()))
+                    .collect(Collectors.toList());
+        } else {
+            List<UUID> tagFilter = request.getTagFilter();
+            boolean excludeMode = "EXCLUDE".equalsIgnoreCase(request.getTagFilterMode());
+            filteredTerms = (tagFilter == null || tagFilter.isEmpty())
+                    ? crossword.getTerms()
+                    : crossword.getTerms().stream()
+                            .filter(t -> {
+                                boolean hasTag = t.getTags() != null && t.getTags().stream().anyMatch(tag -> tagFilter.contains(tag.getId()));
+                                return excludeMode ? !hasTag : hasTag;
+                            })
+                            .collect(Collectors.toList());
+        }
 
         CrosswordState state = crosswordGeneratorService.generate(crossword, filteredTerms, request.getNumberOfWords());
         state.setUser(user);
