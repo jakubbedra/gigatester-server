@@ -181,7 +181,7 @@ public class CrosswordMultiplayerService {
         currentPoints = currentPoints + pointsDelta + wordBonus;
 
         // Refill hand from uncovered grid cells
-        String refilled = refillHand(session, hand.toString(), 5);
+        String refilled = refillHand(session, hand.toString(), 5, isPlayer1);
 
         if (isPlayer1) {
             session.setPlayer1Hand(refilled);
@@ -299,13 +299,15 @@ public class CrosswordMultiplayerService {
         return hand.toString();
     }
 
-    private String refillHand(CrosswordMultiplayerSession session, String currentHand, int targetSize) {
+    private String refillHand(CrosswordMultiplayerSession session, String currentHand, int targetSize, boolean isPlayer1) {
         if (currentHand.length() >= targetSize) return currentHand;
         int needed = targetSize - currentHand.length();
-        List<Character> alreadyInHands = new ArrayList<>(handAsList(session.getPlayer1Hand()));
-        alreadyInHands.addAll(handAsList(session.getPlayer2Hand()));
-        // Remove current hand from alreadyInHands so we exclude them from pool but keep what's already in
-        String added = drawHandFromGrid(session, needed, alreadyInHands);
+        // Exclude letters already in this player's updated hand + opponent's current hand
+        // (do NOT read session.getPlayerXHand() — those still hold stale pre-turn values)
+        String opponentHand = isPlayer1 ? session.getPlayer2Hand() : session.getPlayer1Hand();
+        List<Character> exclude = new ArrayList<>(handAsList(currentHand));
+        exclude.addAll(handAsList(opponentHand));
+        String added = drawHandFromGrid(session, needed, exclude);
         return currentHand + added;
     }
 
