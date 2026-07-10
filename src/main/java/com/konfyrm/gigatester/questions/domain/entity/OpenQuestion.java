@@ -29,4 +29,10 @@ public class OpenQuestion extends Question {
 
     private Double points;
 
+    @Builder.Default
+    private Boolean multipleAnswers = false;
+
+    @Builder.Default
+    private Boolean orderedAnswers = false;
+
 }

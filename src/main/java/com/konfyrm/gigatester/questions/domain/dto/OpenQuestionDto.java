@@ -26,4 +26,8 @@ public class OpenQuestionDto extends QuestionDto {
 
     private double points;
 
+    private boolean multipleAnswers;
+
+    private boolean orderedAnswers;
+
 }

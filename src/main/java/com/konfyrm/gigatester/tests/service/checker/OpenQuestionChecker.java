@@ -8,6 +8,7 @@ import com.konfyrm.gigatester.tests.domain.entity.OpenQuestionState;
 import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
 import jakarta.annotation.Nonnull;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -77,6 +78,9 @@ public class OpenQuestionChecker implements QuestionChecker {
     }
 
     private QuestionState check(@Nonnull QuestionState state, OpenQuestion openQuestion, Set<GradingRule> gradingRules, String givenAnswer) {
+        if (Boolean.TRUE.equals(openQuestion.getMultipleAnswers())) {
+            return checkMultiple(state, openQuestion, gradingRules, givenAnswer);
+        }
         String correctAnswer = openQuestion.getAnswer().getText();
         if (isCorrect(givenAnswer, correctAnswer, gradingRules)) {
             state.setScore(openQuestion.getPoints());
@@ -90,6 +94,35 @@ public class OpenQuestionChecker implements QuestionChecker {
         }
         state.setScore(0.0);
         state.setWasCorrectAnswer(false);
+        return state;
+    }
+
+    private QuestionState checkMultiple(@Nonnull QuestionState state, OpenQuestion openQuestion, Set<GradingRule> gradingRules, String givenAnswer) {
+        List<String> required = new java.util.ArrayList<>();
+        required.add(openQuestion.getAnswer().getText());
+        openQuestion.getAnswerVariations().forEach(v -> required.add(v.getText()));
+
+        List<String> given = givenAnswer == null ? List.of() :
+                java.util.Arrays.stream(givenAnswer.split("\n"))
+                        .map(String::trim)
+                        .collect(java.util.stream.Collectors.toList());
+
+        boolean allCorrect;
+        if (Boolean.TRUE.equals(openQuestion.getOrderedAnswers())) {
+            allCorrect = required.size() == given.size();
+            for (int i = 0; allCorrect && i < required.size(); i++) {
+                allCorrect = isCorrect(given.get(i), required.get(i), gradingRules);
+            }
+        } else {
+            List<String> remaining = new java.util.ArrayList<>(required);
+            for (String g : given) {
+                if (!g.isEmpty()) remaining.removeIf(r -> isCorrect(g, r, gradingRules));
+            }
+            allCorrect = remaining.isEmpty();
+        }
+
+        state.setScore(allCorrect ? openQuestion.getPoints() : 0.0);
+        state.setWasCorrectAnswer(allCorrect);
         return state;
     }
 

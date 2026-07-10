@@ -26,7 +26,9 @@ public class OpenQuestionConverter extends AbstractQuestionConverter<OpenQuestio
         OpenQuestion.OpenQuestionBuilder<?, ?> builder = OpenQuestion.builder()
                 .answer(questionContentConverter.toEntity(dto.getAnswer()))
                 .gradingRulesHash(GradingRule.toHash(dto.getGradingRules()))
-                .points(dto.getPoints());
+                .points(dto.getPoints())
+                .multipleAnswers(dto.isMultipleAnswers())
+                .orderedAnswers(dto.isOrderedAnswers());
         if (dto.getAnswerVariations() != null) {
             builder.answerVariations(dto.getAnswerVariations().stream()
                     .map(questionContentConverter::toEntity)
@@ -42,7 +44,9 @@ public class OpenQuestionConverter extends AbstractQuestionConverter<OpenQuestio
                 .answer(questionContentConverter.toDto(openQuestion.getAnswer()))
                 .answerVariations(openQuestion.getAnswerVariations().stream().map(questionContentConverter::toDto).collect(Collectors.toSet()))
                 .gradingRules(GradingRule.fromHash(openQuestion.getGradingRulesHash()))
-                .points(openQuestion.getPoints());
+                .points(openQuestion.getPoints())
+                .multipleAnswers(Boolean.TRUE.equals(openQuestion.getMultipleAnswers()))
+                .orderedAnswers(Boolean.TRUE.equals(openQuestion.getOrderedAnswers()));
     }
 
 }
