@@ -41,6 +41,9 @@ public interface TestController {
     @DeleteMapping("api/v1/tests/{testId}/authors/{userId}")
     ResponseEntity<?> removeAuthor(@PathVariable("testId") UUID testId, @PathVariable("userId") UUID userId, @AuthenticationPrincipal User user);
 
+    @GetMapping("api/v1/tests/{testId}/tags")
+    ResponseEntity<?> getTestTags(@PathVariable("testId") UUID testId, @AuthenticationPrincipal User user);
+
     @GetMapping("api/v1/tests/{testId}/author-candidates")
     ResponseEntity<?> getAuthorCandidates(@PathVariable("testId") UUID testId, @AuthenticationPrincipal User user);
 

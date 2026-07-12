@@ -158,6 +158,16 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
     List<Question> findAllByTestId(@Param("testId") UUID testId);
 
     @Query(value = """
+        SELECT DISTINCT t.id, t.key
+        FROM tags t
+        JOIN questions_tags qt ON qt.tag_id = t.id
+        JOIN test_templates_questions tq ON tq.questions_id = qt.question_id
+        WHERE tq.test_id = :testId
+        ORDER BY t.key
+    """, nativeQuery = true)
+    List<Object[]> findDistinctTagsByTestId(@Param("testId") UUID testId);
+
+    @Query(value = """
         SELECT q.*
         FROM questions q
         JOIN test_templates_questions tq ON tq.questions_id = q.id

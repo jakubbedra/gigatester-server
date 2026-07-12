@@ -109,6 +109,17 @@ public class TestControllerImpl implements TestController {
     }
 
     @Override
+    public ResponseEntity<?> getTestTags(UUID testId, User user) {
+        if (!accessService.hasAccessToTest(testId, user)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        List<Map<String, Object>> tags = questionRepository.findDistinctTagsByTestId(testId).stream()
+                .map(row -> Map.<String, Object>of("id", row[0].toString(), "key", row[1].toString()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(tags);
+    }
+
+    @Override
     public ResponseEntity<?> addAuthor(UUID testId, UUID userId, User user) {
         requireModerator(user);
         Test test = testService.addAuthor(testId, userId);
