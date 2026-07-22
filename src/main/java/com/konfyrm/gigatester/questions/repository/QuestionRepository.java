@@ -171,6 +171,33 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
         SELECT q.*
         FROM questions q
         JOIN test_templates_questions tq ON tq.questions_id = q.id
+        LEFT JOIN question_contents qc ON qc.id = q.content_id
+        WHERE tq.test_id = :testId
+          AND (:q = '' OR LOWER(qc.text) LIKE LOWER(CONCAT('%', :q, '%')))
+        ORDER BY tq.ctid
+        LIMIT :size OFFSET :offset
+    """, nativeQuery = true)
+    List<Question> findPagedByTestId(
+            @Param("testId") UUID testId,
+            @Param("q") String q,
+            @Param("size") int size,
+            @Param("offset") int offset
+    );
+
+    @Query(value = """
+        SELECT COUNT(DISTINCT q.id)
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
+        LEFT JOIN question_contents qc ON qc.id = q.content_id
+        WHERE tq.test_id = :testId
+          AND (:q = '' OR LOWER(qc.text) LIKE LOWER(CONCAT('%', :q, '%')))
+    """, nativeQuery = true)
+    long countPagedByTestId(@Param("testId") UUID testId, @Param("q") String q);
+
+    @Query(value = """
+        SELECT q.*
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
         WHERE tq.test_id = :testId
             AND q.type = :type
     """, nativeQuery = true)

@@ -2,6 +2,8 @@ package com.konfyrm.gigatester.tests.controller;
 
 import com.konfyrm.gigatester.common.domain.TesterEntityType;
 import com.konfyrm.gigatester.questions.repository.QuestionRepository;
+import com.konfyrm.gigatester.questions.service.QuestionMappingService;
+import com.konfyrm.gigatester.questions.service.impl.QuestionConversionServiceImpl;
 import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroupAccessStatus;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupAccessRepository;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupRepository;
@@ -28,19 +30,23 @@ public class TestControllerImpl implements TestController {
     private final TestService testService;
     private final TestConverter testConverter;
     private final QuestionRepository questionRepository;
+    private final QuestionMappingService questionMappingService;
     private final SubjectGroupAccessService accessService;
     private final SubjectGroupRepository subjectGroupRepository;
     private final SubjectGroupAccessRepository subjectGroupAccessRepository;
     private final UserRepository userRepository;
 
     public TestControllerImpl(TestService testService, TestConverter testConverter,
-                              QuestionRepository questionRepository, SubjectGroupAccessService accessService,
+                              QuestionRepository questionRepository,
+                              @org.springframework.beans.factory.annotation.Qualifier(QuestionConversionServiceImpl.QUALIFIER) QuestionMappingService questionMappingService,
+                              SubjectGroupAccessService accessService,
                               SubjectGroupRepository subjectGroupRepository,
                               SubjectGroupAccessRepository subjectGroupAccessRepository,
                               UserRepository userRepository) {
         this.testService = testService;
         this.testConverter = testConverter;
         this.questionRepository = questionRepository;
+        this.questionMappingService = questionMappingService;
         this.accessService = accessService;
         this.subjectGroupRepository = subjectGroupRepository;
         this.subjectGroupAccessRepository = subjectGroupAccessRepository;
@@ -105,6 +111,25 @@ public class TestControllerImpl implements TestController {
                 "closedQuestionsCount", closed,
                 "openQuestionsCount", open,
                 "statementQuestionsCount", statement
+        ));
+    }
+
+    @Override
+    public ResponseEntity<?> getTestQuestions(UUID testId, int page, int size, String q, User user) {
+        if (!accessService.hasAccessToTest(testId, user)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        int clampedSize = Math.min(Math.max(size, 1), 100);
+        int offset = page * clampedSize;
+        String search = q == null ? "" : q.trim();
+        long total = questionRepository.countPagedByTestId(testId, search);
+        var questions = questionRepository.findPagedByTestId(testId, search, clampedSize, offset)
+                .stream().map(questionMappingService::toDto).toList();
+        return ResponseEntity.ok(Map.of(
+                "questions", questions,
+                "total", total,
+                "page", page,
+                "size", clampedSize
         ));
     }
 

@@ -165,19 +165,24 @@ public class CrosswordTurnService {
     }
 
     private void dropOrphanedLetters(CrosswordState state, CrosswordPlayer player) {
-        Set<Character> available = new HashSet<>();
+        Map<Character, Integer> available = new HashMap<>();
         for (int r = 0; r < state.getHeight(); r++) {
             for (int c = 0; c < state.getWidth(); c++) {
                 if (state.currentAt(r, c) == CrosswordState.UNCOVERED_FIELD) {
-                    available.add(state.solutionAt(r, c));
+                    available.merge(state.solutionAt(r, c), 1, Integer::sum);
                 }
             }
         }
-        String filtered = player.getHandLetters().chars()
-                .filter(c -> available.contains((char) c))
-                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
-                .toString();
-        player.setHandLetters(filtered);
+        Map<Character, Integer> remaining = new HashMap<>(available);
+        StringBuilder filtered = new StringBuilder();
+        for (char ch : player.getHandLetters().toCharArray()) {
+            int count = remaining.getOrDefault(ch, 0);
+            if (count > 0) {
+                filtered.append(ch);
+                remaining.put(ch, count - 1);
+            }
+        }
+        player.setHandLetters(filtered.toString());
     }
 
     private void refillBothHands(CrosswordState state, CrosswordPlayer human, CrosswordPlayer bot, int targetSize) {

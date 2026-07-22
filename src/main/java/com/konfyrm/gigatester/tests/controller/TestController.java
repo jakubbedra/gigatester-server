@@ -44,6 +44,15 @@ public interface TestController {
     @GetMapping("api/v1/tests/{testId}/tags")
     ResponseEntity<?> getTestTags(@PathVariable("testId") UUID testId, @AuthenticationPrincipal User user);
 
+    @GetMapping("api/v1/tests/{testId}/questions")
+    ResponseEntity<?> getTestQuestions(
+            @PathVariable("testId") UUID testId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "") String q,
+            @AuthenticationPrincipal User user
+    );
+
     @GetMapping("api/v1/tests/{testId}/author-candidates")
     ResponseEntity<?> getAuthorCandidates(@PathVariable("testId") UUID testId, @AuthenticationPrincipal User user);
 
