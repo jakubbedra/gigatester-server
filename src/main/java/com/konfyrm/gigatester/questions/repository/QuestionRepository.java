@@ -174,7 +174,7 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
         LEFT JOIN question_contents qc ON qc.id = q.content_id
         WHERE tq.test_id = :testId
           AND (:q = '' OR LOWER(qc.text) LIKE LOWER(CONCAT('%', :q, '%')))
-        ORDER BY tq.ctid
+        ORDER BY q.created_at DESC NULLS LAST
         LIMIT :size OFFSET :offset
     """, nativeQuery = true)
     List<Question> findPagedByTestId(

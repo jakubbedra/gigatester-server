@@ -49,6 +49,7 @@ public abstract class AbstractQuestionConverter<DTO extends QuestionDto, ENTITY 
                 .map(t -> TagResponse.builder().id(t.getId()).key(t.getKey()).build())
                 .toList();
         return createQuestionDtoBuilder(entity)
+                .id(entity.getId())
                 .type(questionType)
                 .content(questionContentConverter.toDto(entity.getContent()))
                 .contentProportions(entity.getContentProportions())
