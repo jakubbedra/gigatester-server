@@ -38,6 +38,7 @@ public class TestStateConverter {
                 .timeLimitEnabled(testState.isTimeLimitEnabled())
                 .timeLimitMs(testState.getTimeLimitMs())
                 .startTime(testState.getStartTime())
+                .hideTagsDuringTest(Boolean.TRUE.equals(testState.getTest().getHideTagsDuringTest()))
                 .build();
     }
 

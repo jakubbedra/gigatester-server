@@ -8,6 +8,7 @@ import com.konfyrm.gigatester.tests.domain.entity.OpenQuestionState;
 import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
 import jakarta.annotation.Nonnull;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -100,7 +101,11 @@ public class OpenQuestionChecker implements QuestionChecker {
     private QuestionState checkMultiple(@Nonnull QuestionState state, OpenQuestion openQuestion, Set<GradingRule> gradingRules, String givenAnswer) {
         List<String> required = new java.util.ArrayList<>();
         required.add(openQuestion.getAnswer().getText());
-        openQuestion.getAnswerVariations().forEach(v -> required.add(v.getText()));
+        openQuestion.getAnswerVariations().stream()
+                .sorted(Comparator.comparing(
+                        com.konfyrm.gigatester.questions.domain.entity.QuestionContent::getVariationOrder,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .forEach(v -> required.add(v.getText()));
 
         List<String> given = givenAnswer == null ? List.of() :
                 java.util.Arrays.stream(givenAnswer.split("\n"))

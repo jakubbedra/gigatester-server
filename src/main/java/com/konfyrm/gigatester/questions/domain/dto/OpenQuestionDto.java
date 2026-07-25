@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -20,7 +21,7 @@ public class OpenQuestionDto extends QuestionDto {
     private QuestionContentDto answer;
 
     @Nullable
-    private Set<QuestionContentDto> answerVariations;
+    private List<QuestionContentDto> answerVariations;
 
     private Set<GradingRule> gradingRules;
 

@@ -24,4 +24,6 @@ public class TestRequest {
 
     private long timeLimit;
 
+    private boolean hideTagsDuringTest;
+
 }

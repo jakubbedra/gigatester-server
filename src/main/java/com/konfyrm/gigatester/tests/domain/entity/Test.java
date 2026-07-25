@@ -36,6 +36,9 @@ public class Test {
     @Column(columnDefinition = "bigint default 0")
     private long timeLimit;
 
+    @Builder.Default
+    private Boolean hideTagsDuringTest = false;
+
     @ManyToMany
     @JoinTable(name = "test_authors",
         joinColumns = @JoinColumn(name = "test_id"),

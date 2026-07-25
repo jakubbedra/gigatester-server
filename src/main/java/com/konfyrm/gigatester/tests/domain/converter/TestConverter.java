@@ -35,6 +35,7 @@ public class TestConverter {
                 .openQuestionsCount(request.getOpenQuestionsCount())
                 .passingPercentage(request.getPassingPercentage())
                 .timeLimit(request.getTimeLimit())
+                .hideTagsDuringTest(request.isHideTagsDuringTest())
                 .build();
     }
 
@@ -49,6 +50,7 @@ public class TestConverter {
                 .storedOpenQuestionsCount((int) test.getQuestions().stream().filter(q -> q.getType() == TesterEntityType.OPEN_QUESTION).count())
                 .passingPercentage(test.getPassingPercentage())
                 .timeLimit(test.getTimeLimit())
+                .hideTagsDuringTest(Boolean.TRUE.equals(test.getHideTagsDuringTest()))
                 .authors(test.getAuthors() == null ? List.of() : test.getAuthors().stream()
                         .map(u -> UserResponse.builder().id(u.getId()).username(u.getUsername())
                                 .role(u.getRole()).profilePictureUrl(u.getProfilePictureUrl()).build())

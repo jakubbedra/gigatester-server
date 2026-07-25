@@ -31,6 +31,8 @@ public class TestResponse {
 
     private long timeLimit;
 
+    private boolean hideTagsDuringTest;
+
     private List<UserResponse> authors;
 
 }

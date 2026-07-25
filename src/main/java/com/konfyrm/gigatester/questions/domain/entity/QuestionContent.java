@@ -1,11 +1,13 @@
 package com.konfyrm.gigatester.questions.domain.entity;
 
 import com.konfyrm.gigatester.questions.domain.entity.enums.ContentType;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 
 import java.util.UUID;
@@ -28,5 +30,13 @@ public class QuestionContent {
     @JdbcTypeCode(org.hibernate.type.SqlTypes.LONGVARCHAR)
     @Column(columnDefinition = "text")
     private String text;
+
+    /**
+     * Only meaningful for {@link OpenQuestion#getAnswerVariations()} entries; nullable so
+     * pre-existing question_contents rows (content/explanation/answer) are unaffected.
+     */
+    @Nullable
+    @Setter
+    private Integer variationOrder;
 
 }

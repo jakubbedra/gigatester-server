@@ -51,6 +51,7 @@ public class TestService {
                 .closedQuestionsCount(test.getClosedQuestionsCount())
                 .passingPercentage(test.getPassingPercentage())
                 .timeLimit(test.getTimeLimit())
+                .hideTagsDuringTest(test.getHideTagsDuringTest())
                 .build());
     }
 

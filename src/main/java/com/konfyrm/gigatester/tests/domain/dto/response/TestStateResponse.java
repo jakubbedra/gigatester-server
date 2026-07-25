@@ -48,6 +48,8 @@ public class TestStateResponse {
 
     private long startTime;
 
+    private boolean hideTagsDuringTest;
+
     @Getter
     @Setter
     @Builder
