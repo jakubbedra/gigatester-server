@@ -4,13 +4,14 @@ import com.konfyrm.gigatester.crosswords.domain.converter.CrosswordConverter;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordRequest;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.service.CrosswordService;
+import com.konfyrm.gigatester.security.domain.Permission;
+import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroupAccessStatus;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupAccessRepository;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupRepository;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
 import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import com.konfyrm.gigatester.users.domain.entity.User;
-import com.konfyrm.gigatester.users.domain.entity.UserRole;
 import com.konfyrm.gigatester.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,23 +30,28 @@ public class CrosswordControllerImpl implements CrosswordController {
     private final SubjectGroupRepository subjectGroupRepository;
     private final SubjectGroupAccessRepository subjectGroupAccessRepository;
     private final UserRepository userRepository;
+    private final PermissionService permissionService;
 
     public CrosswordControllerImpl(CrosswordService crosswordService, CrosswordConverter crosswordConverter,
                                    SubjectRepository subjectRepository,
                                    SubjectGroupRepository subjectGroupRepository,
                                    SubjectGroupAccessRepository subjectGroupAccessRepository,
-                                   UserRepository userRepository) {
+                                   UserRepository userRepository,
+                                   PermissionService permissionService) {
         this.crosswordService = crosswordService;
         this.crosswordConverter = crosswordConverter;
         this.subjectRepository = subjectRepository;
         this.subjectGroupRepository = subjectGroupRepository;
         this.subjectGroupAccessRepository = subjectGroupAccessRepository;
         this.userRepository = userRepository;
+        this.permissionService = permissionService;
     }
 
     @Override
-    public ResponseEntity<?> addCrossword(CrosswordRequest request) {
+    public ResponseEntity<?> addCrossword(CrosswordRequest request, User user) {
+        permissionService.require(permissionService.canCreate(user, Permission.CROSSWORDS_WRITE));
         Crossword entity = crosswordConverter.toEntity(request);
+        entity.setCreatedBy(user);
         Crossword saved = crosswordService.addCrossword(entity);
         return ResponseEntity.accepted().body(saved.getId());
     }
@@ -56,40 +62,42 @@ public class CrosswordControllerImpl implements CrosswordController {
     }
 
     @Override
-    public ResponseEntity<?> getCrossword(UUID id) {
+    public ResponseEntity<?> getCrossword(UUID id, User user) {
         return ResponseEntity.ok(crosswordConverter.toResponse(crosswordService.findCrossword(id)));
     }
 
     @Override
-    public ResponseEntity<?> updateCrossword(UUID id, CrosswordRequest request) {
+    public ResponseEntity<?> updateCrossword(UUID id, CrosswordRequest request, User user) {
+        permissionService.require(permissionService.hasCrosswordPermission(user, id, Permission.CROSSWORDS_WRITE));
         Crossword entity = crosswordConverter.toEntity(request);
         crosswordService.updateCrossword(id, entity);
         return ResponseEntity.accepted().body(id);
     }
 
     @Override
-    public ResponseEntity<?> deleteCrossword(UUID id) {
+    public ResponseEntity<?> deleteCrossword(UUID id, User user) {
+        permissionService.require(permissionService.hasCrosswordPermission(user, id, Permission.CROSSWORDS_WRITE));
         crosswordService.deleteCrossword(id);
         return ResponseEntity.noContent().build();
     }
 
     @Override
     public ResponseEntity<?> addAuthor(UUID id, UUID userId, User user) {
-        requireModerator(user);
+        permissionService.require(permissionService.hasCrosswordPermission(user, id, Permission.CROSSWORDS_WRITE));
         Crossword crossword = crosswordService.addAuthor(id, userId);
         return ResponseEntity.ok(crosswordConverter.toResponse(crossword));
     }
 
     @Override
     public ResponseEntity<?> removeAuthor(UUID id, UUID userId, User user) {
-        requireModerator(user);
+        permissionService.require(permissionService.hasCrosswordPermission(user, id, Permission.CROSSWORDS_WRITE));
         Crossword crossword = crosswordService.removeAuthor(id, userId);
         return ResponseEntity.ok(crosswordConverter.toResponse(crossword));
     }
 
     @Override
     public ResponseEntity<?> getAuthorCandidates(UUID id, User user) {
-        requireModerator(user);
+        permissionService.require(permissionService.hasCrosswordPermission(user, id, Permission.CROSSWORDS_WRITE));
         Crossword crossword = crosswordService.findCrossword(id);
         Set<UUID> alreadyAuthors = crossword.getAuthors().stream().map(User::getId).collect(Collectors.toSet());
 
@@ -101,7 +109,7 @@ public class CrosswordControllerImpl implements CrosswordController {
             )
         );
         userRepository.findAll().stream()
-                .filter(u -> u.getRole() == UserRole.MODERATOR || u.getRole() == UserRole.ADMIN)
+                .filter(permissionService::isStaff)
                 .map(User::getId).forEach(candidateIds::add);
 
         List<UserResponse> candidates = candidateIds.stream()
@@ -113,12 +121,6 @@ public class CrosswordControllerImpl implements CrosswordController {
                 .sorted(Comparator.comparing(UserResponse::getUsername))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(candidates);
-    }
-
-    private void requireModerator(User user) {
-        if (user == null || (user.getRole() != UserRole.MODERATOR && user.getRole() != UserRole.ADMIN)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
     }
 
 }

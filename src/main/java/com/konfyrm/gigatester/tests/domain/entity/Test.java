@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.tests.domain.entity;
 
 import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.users.domain.entity.User;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -45,5 +46,14 @@ public class Test {
         inverseJoinColumns = @JoinColumn(name = "user_id"))
     @Builder.Default
     private List<User> authors = new ArrayList<>();
+
+    /**
+     * Set once at creation. Used to authorize writes on tests not yet attached
+     * to any subject (and therefore not yet resolvable to a subject group).
+     */
+    @Nullable
+    @ManyToOne
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
 
 }

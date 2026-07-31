@@ -5,6 +5,7 @@ import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateUpdate
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTerm;
+import com.konfyrm.gigatester.crosswords.domain.entity.enums.BotDifficulty;
 import com.konfyrm.gigatester.crosswords.service.CrosswordTurnService.TurnOutcome;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordStateRepository;
@@ -68,7 +69,11 @@ public class CrosswordStateService {
 
     @Transactional
     public TurnOutcome updateCrosswordState(UUID id, CrosswordStateUpdateRequest request, UUID userId) {
-        CrosswordState state = findCrosswordState(id, userId);
+        CrosswordState state = crosswordStateRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "CrosswordState with id: " + id + " not found."));
+        if (state.getUser() == null || !state.getUser().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         TurnOutcome outcome = crosswordTurnService.processTurn(state, request.getLetters());
         if (state.getUser() != null && !state.getCurrentGrid().contains(String.valueOf(CrosswordState.UNCOVERED_FIELD))) {
             streakService.recordActivity(state.getUser());
@@ -140,6 +145,7 @@ public class CrosswordStateService {
 
         CrosswordState state = crosswordGeneratorService.generate(crossword, filteredTerms, request.getNumberOfWords());
         state.setUser(user);
+        state.setBotDifficulty(request.getBotDifficulty() != null ? request.getBotDifficulty() : BotDifficulty.NORMAL);
         return crosswordStateRepository.save(state);
     }
 

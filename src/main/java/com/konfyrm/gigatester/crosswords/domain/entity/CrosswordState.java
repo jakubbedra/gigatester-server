@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.crosswords.domain.entity;
 
+import com.konfyrm.gigatester.crosswords.domain.entity.enums.BotDifficulty;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -53,6 +54,10 @@ public class CrosswordState {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private BotDifficulty botDifficulty = BotDifficulty.NORMAL;
 
     public int index(int row, int col) {
         return row * width + col;

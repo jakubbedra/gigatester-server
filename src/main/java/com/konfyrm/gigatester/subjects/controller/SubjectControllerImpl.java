@@ -1,5 +1,7 @@
 package com.konfyrm.gigatester.subjects.controller;
 
+import com.konfyrm.gigatester.security.domain.Permission;
+import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.domain.converter.SubjectConverter;
 import com.konfyrm.gigatester.subjects.domain.dto.request.SubjectRequest;
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
@@ -9,7 +11,6 @@ import com.konfyrm.gigatester.subjects.repository.SubjectGroupRepository;
 import com.konfyrm.gigatester.subjects.service.SubjectService;
 import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import com.konfyrm.gigatester.users.domain.entity.User;
-import com.konfyrm.gigatester.users.domain.entity.UserRole;
 import com.konfyrm.gigatester.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,20 +29,24 @@ public class SubjectControllerImpl implements SubjectController {
     private final SubjectGroupRepository subjectGroupRepository;
     private final SubjectGroupAccessRepository subjectGroupAccessRepository;
     private final UserRepository userRepository;
+    private final PermissionService permissionService;
 
     public SubjectControllerImpl(SubjectService subjectService, SubjectConverter subjectConverter,
                                  SubjectGroupRepository subjectGroupRepository,
                                  SubjectGroupAccessRepository subjectGroupAccessRepository,
-                                 UserRepository userRepository) {
+                                 UserRepository userRepository,
+                                 PermissionService permissionService) {
         this.subjectService = subjectService;
         this.subjectConverter = subjectConverter;
         this.subjectGroupRepository = subjectGroupRepository;
         this.subjectGroupAccessRepository = subjectGroupAccessRepository;
         this.userRepository = userRepository;
+        this.permissionService = permissionService;
     }
 
     @Override
-    public ResponseEntity<?> addSubject(SubjectRequest subjectRequest) {
+    public ResponseEntity<?> addSubject(SubjectRequest subjectRequest, @AuthenticationPrincipal User user) {
+        permissionService.require(permissionService.canCreate(user, Permission.SUBJECTS_WRITE));
         Subject entity = subjectConverter.toEntity(subjectRequest);
         Subject savedEntity = subjectService.addSubject(entity);
         return ResponseEntity.accepted().body(savedEntity.getId());
@@ -59,35 +64,37 @@ public class SubjectControllerImpl implements SubjectController {
     }
 
     @Override
-    public ResponseEntity<?> updateSubject(UUID subjectId, SubjectRequest subjectRequest) {
+    public ResponseEntity<?> updateSubject(UUID subjectId, SubjectRequest subjectRequest, @AuthenticationPrincipal User user) {
+        permissionService.require(permissionService.hasSubjectPermission(user, subjectId, Permission.SUBJECTS_WRITE));
         Subject subject = subjectConverter.toEntity(subjectRequest);
         subjectService.updateSubject(subjectId, subject);
         return ResponseEntity.accepted().body(subjectId);
     }
 
     @Override
-    public ResponseEntity<?> deleteSubject(UUID subjectId) {
+    public ResponseEntity<?> deleteSubject(UUID subjectId, @AuthenticationPrincipal User user) {
+        permissionService.require(permissionService.hasSubjectPermission(user, subjectId, Permission.SUBJECTS_WRITE));
         subjectService.deleteSubject(subjectId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
     public ResponseEntity<?> addAuthor(UUID subjectId, UUID userId, @AuthenticationPrincipal User user) {
-        requireModerator(user);
+        permissionService.require(permissionService.hasSubjectPermission(user, subjectId, Permission.SUBJECTS_WRITE));
         Subject subject = subjectService.addAuthor(subjectId, userId);
         return ResponseEntity.ok(subjectConverter.toResponse(subject, user.getId()));
     }
 
     @Override
     public ResponseEntity<?> removeAuthor(UUID subjectId, UUID userId, @AuthenticationPrincipal User user) {
-        requireModerator(user);
+        permissionService.require(permissionService.hasSubjectPermission(user, subjectId, Permission.SUBJECTS_WRITE));
         Subject subject = subjectService.removeAuthor(subjectId, userId);
         return ResponseEntity.ok(subjectConverter.toResponse(subject, user.getId()));
     }
 
     @Override
     public ResponseEntity<?> getAuthorCandidates(UUID subjectId, @AuthenticationPrincipal User user) {
-        requireModerator(user);
+        permissionService.require(permissionService.hasSubjectPermission(user, subjectId, Permission.SUBJECTS_WRITE));
         Subject subject = subjectService.findSubject(subjectId);
         Set<UUID> alreadyAuthors = subject.getAuthors().stream()
                 .map(User::getId).collect(Collectors.toSet());
@@ -102,7 +109,7 @@ public class SubjectControllerImpl implements SubjectController {
 
         // Also include all moderators and admins
         userRepository.findAll().stream()
-                .filter(u -> u.getRole() == UserRole.MODERATOR || u.getRole() == UserRole.ADMIN)
+                .filter(permissionService::isStaff)
                 .map(User::getId)
                 .forEach(candidateIds::add);
 
@@ -120,12 +127,6 @@ public class SubjectControllerImpl implements SubjectController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(candidates);
-    }
-
-    private void requireModerator(User user) {
-        if (user == null || (user.getRole() != UserRole.MODERATOR && user.getRole() != UserRole.ADMIN)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
     }
 
 }

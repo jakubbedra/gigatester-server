@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface SubjectController {
 
     @PostMapping("api/v1/subjects")
-    ResponseEntity<?> addSubject(@RequestBody SubjectRequest subjectRequest);
+    ResponseEntity<?> addSubject(@RequestBody SubjectRequest subjectRequest, @AuthenticationPrincipal User user);
 
     @GetMapping("api/v1/subjects")
     ResponseEntity<?> getSubjects();
@@ -20,10 +20,10 @@ public interface SubjectController {
     ResponseEntity<?> getSubject(@PathVariable("subjectId") UUID subjectId, @AuthenticationPrincipal User user);
 
     @PutMapping("api/v1/subjects/{subjectId}")
-    ResponseEntity<?> updateSubject(@PathVariable("subjectId") UUID subjectId, @RequestBody SubjectRequest subjectRequest);
+    ResponseEntity<?> updateSubject(@PathVariable("subjectId") UUID subjectId, @RequestBody SubjectRequest subjectRequest, @AuthenticationPrincipal User user);
 
     @DeleteMapping("api/v1/subjects/{subjectId}")
-    ResponseEntity<?> deleteSubject(@PathVariable("subjectId") UUID subjectId);
+    ResponseEntity<?> deleteSubject(@PathVariable("subjectId") UUID subjectId, @AuthenticationPrincipal User user);
 
     @PostMapping("api/v1/subjects/{subjectId}/authors/{userId}")
     ResponseEntity<?> addAuthor(@PathVariable("subjectId") UUID subjectId,

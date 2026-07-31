@@ -1,10 +1,10 @@
 package com.konfyrm.gigatester.subjects.service;
 
+import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroup;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupRepository;
 import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import com.konfyrm.gigatester.users.domain.entity.User;
-import com.konfyrm.gigatester.users.domain.entity.UserRole;
 import com.konfyrm.gigatester.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,11 +22,14 @@ public class SubjectGroupService {
 
     private final SubjectGroupRepository subjectGroupRepository;
     private final UserRepository userRepository;
+    private final PermissionService permissionService;
 
     public SubjectGroupService(SubjectGroupRepository subjectGroupRepository,
-                               UserRepository userRepository) {
+                               UserRepository userRepository,
+                               PermissionService permissionService) {
         this.subjectGroupRepository = subjectGroupRepository;
         this.userRepository = userRepository;
+        this.permissionService = permissionService;
     }
 
     public SubjectGroup addSubjectGroup(SubjectGroup subjectGroup) {
@@ -87,7 +90,7 @@ public class SubjectGroupService {
         Set<UUID> existingOwnerIds = group.getOwners().stream()
                 .map(User::getId).collect(Collectors.toSet());
         return userRepository.findAll().stream()
-                .filter(u -> u.getRole() == UserRole.MODERATOR || u.getRole() == UserRole.ADMIN)
+                .filter(permissionService::isStaff)
                 .filter(u -> !existingOwnerIds.contains(u.getId()))
                 .map(u -> UserResponse.builder()
                         .id(u.getId())

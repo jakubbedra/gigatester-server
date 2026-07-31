@@ -7,6 +7,7 @@ import com.konfyrm.gigatester.crosswords.domain.dto.response.TurnResultResponse;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordPlayer;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordStateTerm;
+import com.konfyrm.gigatester.crosswords.domain.entity.enums.BotDifficulty;
 import com.konfyrm.gigatester.crosswords.domain.entity.enums.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,7 +67,7 @@ public class CrosswordTurnService {
         human.setHandLetters(newHand.toString());
 
         // ── 2. Bot turn ────────────────────────────────────────────────────
-        int botCount = weightedBotCount();
+        int botCount = botCount(state.getBotDifficulty());
         List<int[]> botCells = pickCoveredCells(state, botCount);
         List<TurnCellResult> botPlacements = new ArrayList<>();
 
@@ -140,6 +141,16 @@ public class CrosswordTurnService {
             }
         }
         return results;
+    }
+
+    private int botCount(BotDifficulty difficulty) {
+        BotDifficulty effective = difficulty != null ? difficulty : BotDifficulty.NORMAL;
+        return switch (effective) {
+            case EASY -> RANDOM.nextInt(3);            // 0-2, at most 2
+            case NORMAL -> weightedBotCount();          // 1-5, weighted toward the middle
+            case HARD -> 3 + RANDOM.nextInt(3);          // 3-5
+            case IMPOSSIBLE -> 5;                        // always 5
+        };
     }
 
     private int weightedBotCount() {

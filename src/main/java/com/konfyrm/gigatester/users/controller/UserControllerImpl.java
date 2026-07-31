@@ -68,14 +68,8 @@ public class UserControllerImpl implements UserController {
 
     @Override
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> promote(UUID id) {
-        return ResponseEntity.ok(userService.promoteToModerator(id));
-    }
-
-    @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> demote(UUID id) {
-        return ResponseEntity.ok(userService.demoteToUser(id));
+    public ResponseEntity<UserResponse> assignRole(UUID id, java.util.Map<String, UUID> body) {
+        return ResponseEntity.ok(userService.assignRole(id, body.get("roleId")));
     }
 
     @Override

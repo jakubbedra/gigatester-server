@@ -1,6 +1,7 @@
 package com.konfyrm.gigatester.crosswords.domain.entity;
 
 import com.konfyrm.gigatester.users.domain.entity.User;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -32,5 +33,15 @@ public class Crossword {
         inverseJoinColumns = @JoinColumn(name = "user_id"))
     @Builder.Default
     private List<User> authors = new ArrayList<>();
+
+    /**
+     * Set once at creation. Used to authorize writes on crosswords not yet
+     * attached to any subject (and therefore not yet resolvable to a subject
+     * group).
+     */
+    @Nullable
+    @ManyToOne
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
 
 }

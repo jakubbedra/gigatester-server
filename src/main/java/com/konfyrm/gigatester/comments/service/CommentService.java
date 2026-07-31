@@ -3,6 +3,7 @@ package com.konfyrm.gigatester.comments.service;
 import com.konfyrm.gigatester.comments.domain.dto.response.CommentResponse;
 import com.konfyrm.gigatester.comments.domain.entity.Comment;
 import com.konfyrm.gigatester.comments.repository.CommentRepository;
+import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
 import com.konfyrm.gigatester.users.domain.entity.User;
@@ -19,10 +20,12 @@ public class CommentService {
 
     private final SubjectRepository subjectRepository;
     private final CommentRepository commentRepository;
+    private final PermissionService permissionService;
 
-    public CommentService(SubjectRepository subjectRepository, CommentRepository commentRepository) {
+    public CommentService(SubjectRepository subjectRepository, CommentRepository commentRepository, PermissionService permissionService) {
         this.subjectRepository = subjectRepository;
         this.commentRepository = commentRepository;
+        this.permissionService = permissionService;
     }
 
     @Transactional
@@ -94,9 +97,7 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
         boolean isAuthor = comment.getUser().getId().equals(user.getId());
-        boolean isPrivileged = user.getRole() == com.konfyrm.gigatester.users.domain.entity.UserRole.ADMIN
-                || user.getRole() == com.konfyrm.gigatester.users.domain.entity.UserRole.MODERATOR;
-        if (!isAuthor && !isPrivileged) {
+        if (!isAuthor && !permissionService.isStaff(user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         subject.getComments().removeIf(c -> c.getId().equals(commentId));
@@ -106,11 +107,14 @@ public class CommentService {
     public CommentResponse toResponse(Comment comment, UUID currentUserId) {
         List<CommentResponse> replies = comment.getResponses() == null ? List.of() :
                 comment.getResponses().stream().map(r -> toResponse(r, currentUserId)).toList();
+        User author = comment.getUser();
         return CommentResponse.builder()
                 .id(comment.getId())
-                .authorId(comment.getUser().getId())
-                .authorUsername(comment.getUser().getUsername())
-                .authorAvatarUrl(comment.getUser().getProfilePictureUrl())
+                .authorId(author != null ? author.getId() : null)
+                .authorUsername(author != null ? author.getUsername() : "[deleted]")
+                .authorAvatarUrl(author != null ? author.getProfilePictureUrl() : null)
+                .authorRole(author != null ? author.getRole().name() : null)
+                .authorAssignedRoleName(author != null && author.getAssignedRole() != null ? author.getAssignedRole().getName() : null)
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
                 .likes(comment.getLikedBy().size())

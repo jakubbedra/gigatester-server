@@ -13,7 +13,7 @@ import java.util.UUID;
 public interface TestController {
 
     @PostMapping("api/v1/tests")
-    ResponseEntity<?> addTest(@RequestBody TestRequest testRequest);
+    ResponseEntity<?> addTest(@RequestBody TestRequest testRequest, @AuthenticationPrincipal User user);
 
     @GetMapping("api/v1/tests")
     ResponseEntity<?> getTests();
@@ -22,10 +22,10 @@ public interface TestController {
     ResponseEntity<?> getTest(@PathVariable("testId") UUID testId, @AuthenticationPrincipal User user);
 
     @PutMapping("api/v1/tests/{testId}")
-    ResponseEntity<?> updateTest(@PathVariable("testId") UUID testId, @RequestBody TestRequest testRequest);
+    ResponseEntity<?> updateTest(@PathVariable("testId") UUID testId, @RequestBody TestRequest testRequest, @AuthenticationPrincipal User user);
 
     @DeleteMapping("api/v1/tests/{testId}")
-    ResponseEntity<?> deleteTest(@PathVariable("testId") UUID testId);
+    ResponseEntity<?> deleteTest(@PathVariable("testId") UUID testId, @AuthenticationPrincipal User user);
 
     @GetMapping("api/v1/tests/{testId}/question-counts")
     ResponseEntity<?> getQuestionCounts(

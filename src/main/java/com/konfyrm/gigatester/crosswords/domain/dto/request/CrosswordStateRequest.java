@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.crosswords.domain.dto.request;
 
+import com.konfyrm.gigatester.crosswords.domain.entity.enums.BotDifficulty;
 import lombok.*;
 
 import java.util.List;
@@ -21,5 +22,7 @@ public class CrosswordStateRequest {
     private String tagFilterMode;
 
     private List<UUID> termIdFilter;
+
+    private BotDifficulty botDifficulty;
 
 }

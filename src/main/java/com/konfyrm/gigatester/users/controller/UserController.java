@@ -35,11 +35,8 @@ public interface UserController {
     @GetMapping("/{id}")
     ResponseEntity<UserResponse> findById(@PathVariable UUID id);
 
-    @PutMapping("/{id}/promote")
-    ResponseEntity<UserResponse> promote(@PathVariable UUID id);
-
-    @PutMapping("/{id}/demote")
-    ResponseEntity<UserResponse> demote(@PathVariable UUID id);
+    @PutMapping("/{id}/role")
+    ResponseEntity<UserResponse> assignRole(@PathVariable UUID id, @RequestBody java.util.Map<String, UUID> body);
 
     @DeleteMapping("/{id}")
     ResponseEntity<Void> delete(@PathVariable UUID id);

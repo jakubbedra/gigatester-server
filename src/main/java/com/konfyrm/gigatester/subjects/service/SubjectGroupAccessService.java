@@ -9,8 +9,8 @@ import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroupAccessStatus;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupAccessRepository;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupRepository;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
+import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.users.domain.entity.User;
-import com.konfyrm.gigatester.users.domain.entity.UserRole;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,13 +24,16 @@ public class SubjectGroupAccessService {
     private final SubjectGroupAccessRepository accessRepository;
     private final SubjectGroupRepository groupRepository;
     private final SubjectRepository subjectRepository;
+    private final PermissionService permissionService;
 
     public SubjectGroupAccessService(SubjectGroupAccessRepository accessRepository,
                                      SubjectGroupRepository groupRepository,
-                                     SubjectRepository subjectRepository) {
+                                     SubjectRepository subjectRepository,
+                                     PermissionService permissionService) {
         this.accessRepository = accessRepository;
         this.groupRepository = groupRepository;
         this.subjectRepository = subjectRepository;
+        this.permissionService = permissionService;
     }
 
     public void requestAccess(UUID groupId, User user) {
@@ -102,7 +105,7 @@ public class SubjectGroupAccessService {
     }
 
     public boolean hasAccessToTest(UUID testId, User user) {
-        if (user.getRole() == UserRole.MODERATOR || user.getRole() == UserRole.ADMIN) return true;
+        if (permissionService.isStaff(user)) return true;
         List<Subject> subjects = subjectRepository.findByTests_Id(testId);
         for (Subject subject : subjects) {
             for (SubjectGroup group : groupRepository.findByTests_Id(subject.getId())) {
@@ -119,7 +122,7 @@ public class SubjectGroupAccessService {
     }
 
     public boolean hasAccessToCrossword(UUID crosswordId, User user) {
-        if (user.getRole() == UserRole.MODERATOR || user.getRole() == UserRole.ADMIN) return true;
+        if (permissionService.isStaff(user)) return true;
         List<Subject> subjects = subjectRepository.findByCrosswords_Id(crosswordId);
         for (Subject subject : subjects) {
             for (SubjectGroup group : groupRepository.findByTests_Id(subject.getId())) {

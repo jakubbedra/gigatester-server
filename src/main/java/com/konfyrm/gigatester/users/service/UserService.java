@@ -6,6 +6,9 @@ import com.konfyrm.gigatester.metrics.repository.DailyStreakRepository;
 import com.konfyrm.gigatester.metrics.repository.UserQuestionStatRepository;
 import com.konfyrm.gigatester.metrics.repository.UserTestStatRepository;
 import com.konfyrm.gigatester.security.JwtService;
+import com.konfyrm.gigatester.security.domain.Role;
+import com.konfyrm.gigatester.security.repository.RoleRepository;
+import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupAccessRepository;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
 import com.konfyrm.gigatester.tests.repository.TestStateRepository;
@@ -41,6 +44,8 @@ public class UserService implements UserDetailsService {
     private final DailyStreakRepository dailyStreakRepository;
     private final SubjectGroupAccessRepository subjectGroupAccessRepository;
     private final SubjectRepository subjectRepository;
+    private final RoleRepository roleRepository;
+    private final PermissionService permissionService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -84,28 +89,6 @@ public class UserService implements UserDetailsService {
         return userRepository.findById(id)
                 .map(this::toResponse)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-    }
-
-    public UserResponse promoteToModerator(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if (user.getRole() == UserRole.ADMIN) {
-            throw new IllegalArgumentException("Cannot change admin role");
-        }
-        user.setRole(UserRole.MODERATOR);
-        userRepository.save(user);
-        return toResponse(user);
-    }
-
-    public UserResponse demoteToUser(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if (user.getRole() == UserRole.ADMIN) {
-            throw new IllegalArgumentException("Cannot change admin role");
-        }
-        user.setRole(UserRole.USER);
-        userRepository.save(user);
-        return toResponse(user);
     }
 
     @Transactional
@@ -156,6 +139,20 @@ public class UserService implements UserDetailsService {
         return toResponse(user);
     }
 
+    public UserResponse assignRole(UUID userId, UUID roleId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (roleId == null) {
+            user.setAssignedRole(null);
+        } else {
+            Role role = roleRepository.findById(roleId)
+                    .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+            user.setAssignedRole(role);
+        }
+        userRepository.save(user);
+        return toResponse(user);
+    }
+
     public String generatePasswordResetToken(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -189,6 +186,9 @@ public class UserService implements UserDetailsService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .role(user.getRole())
+                .assignedRoleId(user.getAssignedRole() != null ? user.getAssignedRole().getId() : null)
+                .assignedRoleName(user.getAssignedRole() != null ? user.getAssignedRole().getName() : null)
+                .permissions(permissionService.effectivePermissions(user))
                 .profilePictureUrl(user.getProfilePictureUrl())
                 .bio(user.getBio())
                 .build();

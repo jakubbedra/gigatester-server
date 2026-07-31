@@ -11,19 +11,19 @@ import java.util.UUID;
 public interface CrosswordController {
 
     @PostMapping("api/v1/crosswords")
-    ResponseEntity<?> addCrossword(@RequestBody CrosswordRequest request);
+    ResponseEntity<?> addCrossword(@RequestBody CrosswordRequest request, @AuthenticationPrincipal User user);
 
     @GetMapping("api/v1/crosswords")
     ResponseEntity<?> getCrosswords();
 
     @GetMapping("api/v1/crosswords/{id}")
-    ResponseEntity<?> getCrossword(@PathVariable("id") UUID id);
+    ResponseEntity<?> getCrossword(@PathVariable("id") UUID id, @AuthenticationPrincipal User user);
 
     @PutMapping("api/v1/crosswords/{id}")
-    ResponseEntity<?> updateCrossword(@PathVariable("id") UUID id, @RequestBody CrosswordRequest request);
+    ResponseEntity<?> updateCrossword(@PathVariable("id") UUID id, @RequestBody CrosswordRequest request, @AuthenticationPrincipal User user);
 
     @DeleteMapping("api/v1/crosswords/{id}")
-    ResponseEntity<?> deleteCrossword(@PathVariable("id") UUID id);
+    ResponseEntity<?> deleteCrossword(@PathVariable("id") UUID id, @AuthenticationPrincipal User user);
 
     @PutMapping("api/v1/crosswords/{id}/authors/{userId}")
     ResponseEntity<?> addAuthor(@PathVariable("id") UUID id, @PathVariable("userId") UUID userId, @AuthenticationPrincipal User user);

@@ -4,6 +4,8 @@ import com.konfyrm.gigatester.common.domain.TesterEntityType;
 import com.konfyrm.gigatester.questions.repository.QuestionRepository;
 import com.konfyrm.gigatester.questions.service.QuestionMappingService;
 import com.konfyrm.gigatester.questions.service.impl.QuestionConversionServiceImpl;
+import com.konfyrm.gigatester.security.domain.Permission;
+import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroupAccessStatus;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupAccessRepository;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupRepository;
@@ -14,7 +16,6 @@ import com.konfyrm.gigatester.tests.domain.entity.Test;
 import com.konfyrm.gigatester.tests.service.TestService;
 import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import com.konfyrm.gigatester.users.domain.entity.User;
-import com.konfyrm.gigatester.users.domain.entity.UserRole;
 import com.konfyrm.gigatester.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +36,7 @@ public class TestControllerImpl implements TestController {
     private final SubjectGroupRepository subjectGroupRepository;
     private final SubjectGroupAccessRepository subjectGroupAccessRepository;
     private final UserRepository userRepository;
+    private final PermissionService permissionService;
 
     public TestControllerImpl(TestService testService, TestConverter testConverter,
                               QuestionRepository questionRepository,
@@ -42,7 +44,8 @@ public class TestControllerImpl implements TestController {
                               SubjectGroupAccessService accessService,
                               SubjectGroupRepository subjectGroupRepository,
                               SubjectGroupAccessRepository subjectGroupAccessRepository,
-                              UserRepository userRepository) {
+                              UserRepository userRepository,
+                              PermissionService permissionService) {
         this.testService = testService;
         this.testConverter = testConverter;
         this.questionRepository = questionRepository;
@@ -51,11 +54,14 @@ public class TestControllerImpl implements TestController {
         this.subjectGroupRepository = subjectGroupRepository;
         this.subjectGroupAccessRepository = subjectGroupAccessRepository;
         this.userRepository = userRepository;
+        this.permissionService = permissionService;
     }
 
     @Override
-    public ResponseEntity<?> addTest(TestRequest testRequest) {
+    public ResponseEntity<?> addTest(TestRequest testRequest, User user) {
+        permissionService.require(permissionService.canCreate(user, Permission.TESTS_WRITE));
         Test entity = testConverter.toEntity(testRequest);
+        entity.setCreatedBy(user);
         Test savedEntity = testService.addTest(entity);
         return ResponseEntity.accepted().body(savedEntity.getId());
     }
@@ -74,14 +80,16 @@ public class TestControllerImpl implements TestController {
     }
 
     @Override
-    public ResponseEntity<?> updateTest(UUID testId, TestRequest testRequest) {
+    public ResponseEntity<?> updateTest(UUID testId, TestRequest testRequest, User user) {
+        permissionService.require(permissionService.hasTestPermission(user, testId, Permission.TESTS_WRITE));
         Test test = testConverter.toEntity(testRequest);
         testService.updateTest(testId, test);
         return ResponseEntity.accepted().body(test.getId());
     }
 
     @Override
-    public ResponseEntity<?> deleteTest(UUID testId) {
+    public ResponseEntity<?> deleteTest(UUID testId, User user) {
+        permissionService.require(permissionService.hasTestPermission(user, testId, Permission.TESTS_WRITE));
         testService.deleteTest(testId);
         return ResponseEntity.noContent().build();
     }
@@ -146,21 +154,21 @@ public class TestControllerImpl implements TestController {
 
     @Override
     public ResponseEntity<?> addAuthor(UUID testId, UUID userId, User user) {
-        requireModerator(user);
+        permissionService.require(permissionService.hasTestPermission(user, testId, Permission.TESTS_WRITE));
         Test test = testService.addAuthor(testId, userId);
         return ResponseEntity.ok(testConverter.toResponse(test));
     }
 
     @Override
     public ResponseEntity<?> removeAuthor(UUID testId, UUID userId, User user) {
-        requireModerator(user);
+        permissionService.require(permissionService.hasTestPermission(user, testId, Permission.TESTS_WRITE));
         Test test = testService.removeAuthor(testId, userId);
         return ResponseEntity.ok(testConverter.toResponse(test));
     }
 
     @Override
     public ResponseEntity<?> getAuthorCandidates(UUID testId, User user) {
-        requireModerator(user);
+        permissionService.require(permissionService.hasTestPermission(user, testId, Permission.TESTS_WRITE));
         Test test = testService.findTest(testId);
         Set<UUID> alreadyAuthors = test.getAuthors().stream().map(User::getId).collect(Collectors.toSet());
 
@@ -170,7 +178,7 @@ public class TestControllerImpl implements TestController {
                 .forEach(req -> candidateIds.add(req.getUser().getId()))
         );
         userRepository.findAll().stream()
-                .filter(u -> u.getRole() == UserRole.MODERATOR || u.getRole() == UserRole.ADMIN)
+                .filter(permissionService::isStaff)
                 .map(User::getId).forEach(candidateIds::add);
 
         List<UserResponse> candidates = candidateIds.stream()
@@ -182,12 +190,6 @@ public class TestControllerImpl implements TestController {
                 .sorted(Comparator.comparing(UserResponse::getUsername))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(candidates);
-    }
-
-    private void requireModerator(User user) {
-        if (user == null || (user.getRole() != UserRole.MODERATOR && user.getRole() != UserRole.ADMIN)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
     }
 
 }

@@ -3,9 +3,11 @@ package com.konfyrm.gigatester.ai.controller;
 import com.konfyrm.gigatester.ai.dto.AiQuestionDto;
 import com.konfyrm.gigatester.ai.dto.AiSaveRequest;
 import com.konfyrm.gigatester.ai.service.AiService;
+import com.konfyrm.gigatester.security.domain.Permission;
+import com.konfyrm.gigatester.security.service.PermissionService;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,20 +19,23 @@ import java.util.List;
 public class AiControllerImpl implements AiController {
 
     private final AiService aiService;
+    private final PermissionService permissionService;
 
-    public AiControllerImpl(AiService aiService) {
+    public AiControllerImpl(AiService aiService, PermissionService permissionService) {
         this.aiService = aiService;
+        this.permissionService = permissionService;
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN')")
     public ResponseEntity<List<AiQuestionDto>> generateQuestions(
             MultipartFile file,
             int closedCount,
             int multipleChoiceCount,
             int openCount,
-            int answerCount
+            int answerCount,
+            User user
     ) {
+        permissionService.require(permissionService.canCreate(user, Permission.TESTS_WRITE));
         try {
             List<AiQuestionDto> questions = aiService.generateQuestions(file, closedCount, multipleChoiceCount, openCount, answerCount);
             return ResponseEntity.ok(questions);
@@ -42,8 +47,8 @@ public class AiControllerImpl implements AiController {
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN')")
-    public ResponseEntity<Void> saveQuestions(AiSaveRequest request) {
+    public ResponseEntity<Void> saveQuestions(AiSaveRequest request, User user) {
+        permissionService.require(permissionService.canCreate(user, Permission.TESTS_WRITE));
         aiService.saveQuestions(request.getTestId(), request.getQuestions());
         return ResponseEntity.ok().build();
     }

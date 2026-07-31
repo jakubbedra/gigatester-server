@@ -16,6 +16,8 @@ public class CommentResponse {
     private UUID authorId;
     private String authorUsername;
     private String authorAvatarUrl;
+    private String authorRole;
+    private String authorAssignedRoleName;
     private String content;
     private LocalDateTime createdAt;
     private int likes;

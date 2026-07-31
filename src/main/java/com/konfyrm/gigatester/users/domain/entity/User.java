@@ -1,5 +1,7 @@
 package com.konfyrm.gigatester.users.domain.entity;
 
+import com.konfyrm.gigatester.security.domain.Role;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -38,6 +40,16 @@ public class User implements UserDetails {
 
     @Column(columnDefinition = "text")
     private String bio;
+
+    /**
+     * DB-configurable permission bundle. Only meaningful for non-admins: their
+     * effective permissions are this role's permissions, scoped to the subject
+     * groups they own (see SubjectGroup.owners). Admins bypass this entirely.
+     */
+    @Nullable
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    private Role assignedRole;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

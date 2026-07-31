@@ -22,10 +22,11 @@ public class DailyStreakControllerImpl implements DailyStreakController {
     @Override
     public ResponseEntity<Map<String, Object>> getStreak(User user) {
         DailyStreak streak = streakService.getStreak(user);
-        return ResponseEntity.ok(Map.of(
-                "currentStreak", streak.getCurrentStreak(),
-                "longestStreak", streak.getLongestStreak()
-        ));
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("currentStreak", streak.getCurrentStreak());
+        body.put("longestStreak", streak.getLongestStreak());
+        body.put("lastActivityDate", streak.getLastActivityDate());
+        return ResponseEntity.ok(body);
     }
 
 }
