@@ -40,7 +40,7 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
     );
 
     @Query(value = """
-        SELECT q.*
+        SELECT DISTINCT q.*
         FROM questions q
         JOIN test_templates_questions tq ON tq.questions_id = q.id
         JOIN questions_tags qt ON qt.question_id = q.id
@@ -58,7 +58,7 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
     );
 
     @Query(value = """
-        SELECT q.*
+        SELECT DISTINCT q.*
         FROM questions q
         JOIN test_templates_questions tq ON tq.questions_id = q.id
         JOIN questions_tags qt ON qt.question_id = q.id
@@ -71,6 +71,134 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
             @Param("testId") UUID testId,
             @Param("type") String type,
             @Param("tagIds") Collection<UUID> tagIds
+    );
+
+    // ── AND mode: question must have ALL of the selected tags ──
+
+    @Query(value = """
+        SELECT q.*
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
+        JOIN questions_tags qt ON qt.question_id = q.id
+        WHERE tq.test_id = :testId
+            AND q.type = :type
+            AND qt.tag_id IN (:tagIds)
+        GROUP BY q.id
+        HAVING COUNT(DISTINCT qt.tag_id) = :tagCount
+        ORDER BY RANDOM()
+        LIMIT :count
+    """, nativeQuery = true)
+    List<Question> findRandomQuestionsByAllTags(
+            @Param("testId") UUID testId,
+            @Param("type") String type,
+            @Param("count") int count,
+            @Param("tagIds") Collection<UUID> tagIds,
+            @Param("tagCount") int tagCount
+    );
+
+    @Query(value = """
+        SELECT q.*
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
+        JOIN questions_tags qt ON qt.question_id = q.id
+        WHERE tq.test_id = :testId
+            AND q.type = :type
+            AND qt.tag_id IN (:tagIds)
+        GROUP BY q.id
+        HAVING COUNT(DISTINCT qt.tag_id) = :tagCount
+        ORDER BY RANDOM()
+    """, nativeQuery = true)
+    List<Question> findRandomQuestionsByAllTags(
+            @Param("testId") UUID testId,
+            @Param("type") String type,
+            @Param("tagIds") Collection<UUID> tagIds,
+            @Param("tagCount") int tagCount
+    );
+
+    @Query(value = """
+        SELECT COUNT(*) FROM (
+            SELECT q.id
+            FROM questions q
+            JOIN test_templates_questions tq ON tq.questions_id = q.id
+            JOIN questions_tags qt ON qt.question_id = q.id
+            WHERE tq.test_id = :testId
+                AND q.type = :type
+                AND qt.tag_id IN (:tagIds)
+            GROUP BY q.id
+            HAVING COUNT(DISTINCT qt.tag_id) = :tagCount
+        ) matched
+    """, nativeQuery = true)
+    long countByTestIdAndTypeAndAllTags(
+            @Param("testId") UUID testId,
+            @Param("type") String type,
+            @Param("tagIds") Collection<UUID> tagIds,
+            @Param("tagCount") int tagCount
+    );
+
+    // ── AND-exclude mode: question must NOT have ALL of the selected tags ──
+
+    @Query(value = """
+        SELECT q.*
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
+        WHERE tq.test_id = :testId
+            AND q.type = :type
+            AND q.id NOT IN (
+                SELECT qt2.question_id FROM questions_tags qt2
+                WHERE qt2.tag_id IN (:tagIds)
+                GROUP BY qt2.question_id
+                HAVING COUNT(DISTINCT qt2.tag_id) = :tagCount
+            )
+        ORDER BY RANDOM()
+        LIMIT :count
+    """, nativeQuery = true)
+    List<Question> findRandomQuestionsExcludingAllTags(
+            @Param("testId") UUID testId,
+            @Param("type") String type,
+            @Param("count") int count,
+            @Param("tagIds") Collection<UUID> tagIds,
+            @Param("tagCount") int tagCount
+    );
+
+    @Query(value = """
+        SELECT q.*
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
+        WHERE tq.test_id = :testId
+            AND q.type = :type
+            AND q.id NOT IN (
+                SELECT qt2.question_id FROM questions_tags qt2
+                WHERE qt2.tag_id IN (:tagIds)
+                GROUP BY qt2.question_id
+                HAVING COUNT(DISTINCT qt2.tag_id) = :tagCount
+            )
+        ORDER BY RANDOM()
+    """, nativeQuery = true)
+    List<Question> findRandomQuestionsExcludingAllTags(
+            @Param("testId") UUID testId,
+            @Param("type") String type,
+            @Param("tagIds") Collection<UUID> tagIds,
+            @Param("tagCount") int tagCount
+    );
+
+    @Query(value = """
+        SELECT COUNT(DISTINCT q.id)
+        FROM questions q
+        JOIN test_templates_questions tq ON tq.questions_id = q.id
+        WHERE tq.test_id = :testId
+            AND q.type = :type
+            AND q.id NOT IN (
+                SELECT qt2.question_id FROM questions_tags qt2
+                WHERE qt2.tag_id IN (:tagIds)
+                GROUP BY qt2.question_id
+                HAVING COUNT(DISTINCT qt2.tag_id) = :tagCount
+            )
+    """, nativeQuery = true)
+    long countByTestIdAndTypeExcludingAllTags(
+            @Param("testId") UUID testId,
+            @Param("type") String type,
+            @Param("tagIds") Collection<UUID> tagIds,
+            @Param("tagCount") int tagCount
     );
 
     @Query(value = """

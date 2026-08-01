@@ -25,4 +25,7 @@ public class CrosswordStateRequest {
 
     private BotDifficulty botDifficulty;
 
+    /** AND mode when true (term must have ALL tagFilter tags); OR mode when false (at least one). */
+    private boolean matchAllTags;
+
 }

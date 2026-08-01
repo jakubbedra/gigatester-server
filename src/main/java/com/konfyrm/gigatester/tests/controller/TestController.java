@@ -32,6 +32,7 @@ public interface TestController {
             @PathVariable("testId") UUID testId,
             @RequestParam(value = "tagIds", required = false) List<UUID> tagIds,
             @RequestParam(value = "excludeTags", defaultValue = "false") boolean excludeTags,
+            @RequestParam(value = "matchAllTags", defaultValue = "false") boolean matchAllTags,
             @AuthenticationPrincipal User user
     );
 

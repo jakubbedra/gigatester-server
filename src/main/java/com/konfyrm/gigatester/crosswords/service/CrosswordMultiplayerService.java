@@ -52,17 +52,7 @@ public class CrosswordMultiplayerService {
         Crossword crossword = crosswordRepository.findById(request.getCrosswordId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Crossword not found"));
 
-        List<UUID> tagFilter = request.getTagFilter();
-        boolean excludeMode = "EXCLUDE".equalsIgnoreCase(request.getTagFilterMode());
-        List<CrosswordTerm> filteredTerms = (tagFilter == null || tagFilter.isEmpty())
-                ? crossword.getTerms()
-                : crossword.getTerms().stream()
-                        .filter(t -> {
-                            boolean hasTag = t.getTags() != null && t.getTags().stream()
-                                    .anyMatch(tag -> tagFilter.contains(tag.getId()));
-                            return excludeMode ? !hasTag : hasTag;
-                        })
-                        .collect(Collectors.toList());
+        List<CrosswordTerm> filteredTerms = CrosswordTagFilter.filter(crossword.getTerms(), request.getTagFilter(), request.getTagFilterMode(), request.isMatchAllTags());
 
         CrosswordState generated = generatorService.generate(crossword, filteredTerms, request.getNumberOfWords());
 

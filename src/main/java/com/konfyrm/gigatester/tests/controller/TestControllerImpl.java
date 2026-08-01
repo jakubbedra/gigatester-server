@@ -95,25 +95,38 @@ public class TestControllerImpl implements TestController {
     }
 
     @Override
-    public ResponseEntity<?> getQuestionCounts(UUID testId, List<UUID> tagIds, boolean excludeTags, User user) {
+    public ResponseEntity<?> getQuestionCounts(UUID testId, List<UUID> tagIds, boolean excludeTags, boolean matchAllTags, User user) {
         if (!accessService.hasAccessToTest(testId, user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
         boolean filtered = tagIds != null && !tagIds.isEmpty();
+        int tagCount = filtered ? tagIds.size() : 0;
         long closed = !filtered
                 ? questionRepository.countByTestIdAndType(testId, TesterEntityType.CLOSED_QUESTION.toString())
+                : excludeTags && matchAllTags
+                ? questionRepository.countByTestIdAndTypeExcludingAllTags(testId, TesterEntityType.CLOSED_QUESTION.toString(), tagIds, tagCount)
                 : excludeTags
                 ? questionRepository.countByTestIdAndTypeExcludingTags(testId, TesterEntityType.CLOSED_QUESTION.toString(), tagIds)
+                : matchAllTags
+                ? questionRepository.countByTestIdAndTypeAndAllTags(testId, TesterEntityType.CLOSED_QUESTION.toString(), tagIds, tagCount)
                 : questionRepository.countByTestIdAndTypeAndTags(testId, TesterEntityType.CLOSED_QUESTION.toString(), tagIds);
         long open = !filtered
                 ? questionRepository.countByTestIdAndType(testId, TesterEntityType.OPEN_QUESTION.toString())
+                : excludeTags && matchAllTags
+                ? questionRepository.countByTestIdAndTypeExcludingAllTags(testId, TesterEntityType.OPEN_QUESTION.toString(), tagIds, tagCount)
                 : excludeTags
                 ? questionRepository.countByTestIdAndTypeExcludingTags(testId, TesterEntityType.OPEN_QUESTION.toString(), tagIds)
+                : matchAllTags
+                ? questionRepository.countByTestIdAndTypeAndAllTags(testId, TesterEntityType.OPEN_QUESTION.toString(), tagIds, tagCount)
                 : questionRepository.countByTestIdAndTypeAndTags(testId, TesterEntityType.OPEN_QUESTION.toString(), tagIds);
         long statement = !filtered
                 ? questionRepository.countByTestIdAndType(testId, TesterEntityType.STATEMENT_QUESTION.toString())
+                : excludeTags && matchAllTags
+                ? questionRepository.countByTestIdAndTypeExcludingAllTags(testId, TesterEntityType.STATEMENT_QUESTION.toString(), tagIds, tagCount)
                 : excludeTags
                 ? questionRepository.countByTestIdAndTypeExcludingTags(testId, TesterEntityType.STATEMENT_QUESTION.toString(), tagIds)
+                : matchAllTags
+                ? questionRepository.countByTestIdAndTypeAndAllTags(testId, TesterEntityType.STATEMENT_QUESTION.toString(), tagIds, tagCount)
                 : questionRepository.countByTestIdAndTypeAndTags(testId, TesterEntityType.STATEMENT_QUESTION.toString(), tagIds);
         return ResponseEntity.ok(Map.of(
                 "closedQuestionsCount", closed,

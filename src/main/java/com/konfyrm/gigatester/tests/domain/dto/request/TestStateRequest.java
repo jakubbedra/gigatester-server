@@ -38,4 +38,7 @@ public class TestStateRequest {
 
     private boolean excludeTags;
 
+    /** AND mode when true (must have ALL tagIds); OR mode when false (must have at least one). */
+    private boolean matchAllTags;
+
 }
