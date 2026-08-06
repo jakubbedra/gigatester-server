@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.crosswords.controller;
 
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CompleteTestRunRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.StartTestRunRequest;
+import com.konfyrm.gigatester.crosswords.domain.dto.request.UpdateTestRunProgressRequest;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +22,14 @@ public interface CrosswordTestRunController {
             @AuthenticationPrincipal User user
     );
 
+    @PutMapping("/progress")
+    @PreAuthorize("isAuthenticated()")
+    ResponseEntity<?> updateProgress(
+            @PathVariable UUID crosswordId,
+            @RequestBody UpdateTestRunProgressRequest request,
+            @AuthenticationPrincipal User user
+    );
+
     @PostMapping("/complete")
     @PreAuthorize("isAuthenticated()")
     ResponseEntity<?> completeTestRun(
@@ -32,6 +41,13 @@ public interface CrosswordTestRunController {
     @GetMapping("/latest")
     @PreAuthorize("isAuthenticated()")
     ResponseEntity<?> getLatestRun(
+            @PathVariable UUID crosswordId,
+            @AuthenticationPrincipal User user
+    );
+
+    @GetMapping("/in-progress")
+    @PreAuthorize("isAuthenticated()")
+    ResponseEntity<?> getInProgressRun(
             @PathVariable UUID crosswordId,
             @AuthenticationPrincipal User user
     );

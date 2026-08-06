@@ -10,4 +10,7 @@ import java.util.UUID;
 @Builder
 public class StartTestRunResponse {
     private List<TestRunTermResponse> terms;
+    /** Index of the first unanswered term — 0 for a fresh run, >0 when resuming an in-progress run. */
+    private int resumedIndex;
+    private List<UUID> resumedWrongTermIds;
 }
