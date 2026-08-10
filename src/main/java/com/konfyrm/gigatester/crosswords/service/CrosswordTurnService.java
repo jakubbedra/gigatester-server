@@ -33,7 +33,7 @@ public class CrosswordTurnService {
 
         for (CrosswordLetterRequest letter : letters) {
             int r = letter.getRow(), c = letter.getColumn();
-            char played = Character.toUpperCase(letter.getC());
+            char played = CrosswordTextUtils.toGridCase(letter.getC());
             boolean correct = state.currentAt(r, c) == CrosswordState.UNCOVERED_FIELD
                     && state.solutionAt(r, c) == played;
 
@@ -57,7 +57,7 @@ public class CrosswordTurnService {
         // Update human hand: remove attempted letters, add back wrong ones
         StringBuilder newHand = new StringBuilder(human.getHandLetters());
         for (CrosswordLetterRequest letter : letters) {
-            char c = Character.toUpperCase(letter.getC());
+            char c = CrosswordTextUtils.toGridCase(letter.getC());
             int idx = newHand.indexOf(String.valueOf(c));
             if (idx >= 0) newHand.deleteCharAt(idx);
         }
@@ -120,7 +120,7 @@ public class CrosswordTurnService {
 
     private boolean isWordComplete(CrosswordState state, CrosswordStateTerm term) {
         int r = term.getRow(), c = term.getColumn();
-        String word = term.getCrosswordTerm().getTerm().toUpperCase();
+        String word = CrosswordTextUtils.toGridCase(term.getCrosswordTerm().getTerm());
         int dr = term.getDirection() == Direction.DOWN ? 1 : 0;
         int dc = term.getDirection() == Direction.ACROSS ? 1 : 0;
         for (int i = 0; i < word.length(); i++) {

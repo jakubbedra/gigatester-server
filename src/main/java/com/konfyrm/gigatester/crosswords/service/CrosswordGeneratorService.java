@@ -67,7 +67,7 @@ public class CrosswordGeneratorService {
         if (System.currentTimeMillis() > deadline) return false;
 
         CrosswordTerm term = terms.get(index);
-        String word = term.getTerm().toUpperCase();
+        String word = CrosswordTextUtils.toGridCase(term.getTerm());
 
         List<Placement> candidates;
 

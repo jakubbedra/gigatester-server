@@ -137,7 +137,7 @@ public class CrosswordMultiplayerService {
 
         for (CrosswordLetterRequest letter : letters) {
             int r = letter.getRow(), c = letter.getColumn();
-            char played = Character.toUpperCase(letter.getC());
+            char played = CrosswordTextUtils.toGridCase(letter.getC());
             boolean correct = session.currentAt(r, c) == CrosswordState.UNCOVERED_FIELD
                     && session.solutionAt(r, c) == played;
 
@@ -231,7 +231,7 @@ public class CrosswordMultiplayerService {
     private Set<UUID> completeTermIds(CrosswordMultiplayerSession session) {
         Set<UUID> complete = new HashSet<>();
         for (CrosswordMultiplayerTerm term : session.getTerms()) {
-            String word = term.getCrosswordTerm().getTerm().toUpperCase();
+            String word = CrosswordTextUtils.toGridCase(term.getCrosswordTerm().getTerm());
             int r = term.getRow(), c = term.getColumn();
             int dr = term.getDirection() == Direction.DOWN ? 1 : 0;
             int dc = term.getDirection() == Direction.ACROSS ? 1 : 0;
