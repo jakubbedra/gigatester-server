@@ -125,14 +125,12 @@ public class CrosswordStateService {
                 .ifPresent(crosswordStateRepository::delete);
 
         List<UUID> termIdFilter = request.getTermIdFilter();
-        List<CrosswordTerm> filteredTerms;
-        if (termIdFilter != null && !termIdFilter.isEmpty()) {
-            filteredTerms = crossword.getTerms().stream()
-                    .filter(t -> termIdFilter.contains(t.getId()))
-                    .collect(Collectors.toList());
-        } else {
-            filteredTerms = CrosswordTagFilter.filter(crossword.getTerms(), request.getTagFilter(), request.getTagFilterMode(), request.isMatchAllTags());
-        }
+        List<CrosswordTerm> filteredTerms = (termIdFilter != null && !termIdFilter.isEmpty())
+                ? crossword.getTerms().stream()
+                        .filter(t -> termIdFilter.contains(t.getId()))
+                        .collect(Collectors.toList())
+                : crossword.getTerms();
+        filteredTerms = CrosswordTagFilter.filter(filteredTerms, request.getTagFilter(), request.getTagFilterMode(), request.isMatchAllTags());
 
         CrosswordState state = crosswordGeneratorService.generate(crossword, filteredTerms, request.getNumberOfWords());
         state.setUser(user);
