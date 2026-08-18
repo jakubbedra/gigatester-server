@@ -58,7 +58,9 @@ public class CrosswordGeneratorService {
         int maxLen = terms.stream().mapToInt(t -> t.getTerm().length()).max().orElse(5);
         int totalLen = terms.stream().mapToInt(t -> t.getTerm().length()).sum();
         int estimated = (int) Math.sqrt(totalLen * 2.5);
-        return Math.min(Math.max(maxLen + 4, estimated), MAX_GRID_SIZE);
+        int size = Math.min(Math.max(maxLen + 4, estimated), MAX_GRID_SIZE);
+        // The longest word must always fit, even if that means exceeding MAX_GRID_SIZE.
+        return Math.max(size, maxLen);
     }
 
     private boolean backtrack(List<CrosswordTerm> terms, int index, char[][] grid, int size,
