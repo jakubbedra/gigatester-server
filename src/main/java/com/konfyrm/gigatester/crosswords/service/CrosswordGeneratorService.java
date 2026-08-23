@@ -1,11 +1,13 @@
 package com.konfyrm.gigatester.crosswords.service;
 
+import com.konfyrm.gigatester.crosswords.config.CrosswordProperties;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordPlayer;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordStateTerm;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTerm;
 import com.konfyrm.gigatester.crosswords.domain.entity.enums.Direction;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +21,13 @@ public class CrosswordGeneratorService {
     private static final long TIME_LIMIT_MS = 4_000;
     private static final int MAX_RETRIES = 3;
 
+    private final CrosswordProperties crosswordProperties;
+
+    @Autowired
+    public CrosswordGeneratorService(CrosswordProperties crosswordProperties) {
+        this.crosswordProperties = crosswordProperties;
+    }
+
     record Placement(CrosswordTerm term, int row, int col, Direction direction, int intersections) {}
 
     public CrosswordState generate(Crossword crossword, int numberOfWords) {
@@ -28,6 +37,10 @@ public class CrosswordGeneratorService {
     public CrosswordState generate(Crossword crossword, List<CrosswordTerm> terms, int numberOfWords) {
         if (terms == null || terms.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Crossword has no terms matching the selected tags");
+        }
+        if (numberOfWords > crosswordProperties.getMaxWordLimit()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "numberOfWords exceeds the configured maximum of " + crosswordProperties.getMaxWordLimit());
         }
 
         List<CrosswordTerm> pool = new ArrayList<>(terms);

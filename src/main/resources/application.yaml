@@ -32,6 +32,9 @@ giga-tester:
     secret: ${JWT_SECRET}
     expiration-ms: 86400000
 
+crossword:
+  max-word-limit: ${CROSSWORD_MAX_WORD_LIMIT:30}
+
 openai:
   api-key: ${OPENAI_API_KEY}
   model: gpt-4o-mini

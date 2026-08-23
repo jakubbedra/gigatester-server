@@ -57,6 +57,12 @@ public class UserControllerImpl implements UserController {
     }
 
     @Override
+    public ResponseEntity<UserResponse> updateShowFavouritesTab(@AuthenticationPrincipal User user,
+                                                                 java.util.Map<String, Boolean> body) {
+        return ResponseEntity.ok(userService.updateShowFavouritesTab(user, Boolean.TRUE.equals(body.get("show"))));
+    }
+
+    @Override
     public ResponseEntity<List<UserResponse>> findAll() {
         return ResponseEntity.ok(userService.findAll());
     }

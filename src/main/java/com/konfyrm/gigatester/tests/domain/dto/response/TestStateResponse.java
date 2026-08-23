@@ -18,6 +18,8 @@ public class TestStateResponse {
 
     private UUID id;
 
+    private UUID testId;
+
     private String testName;
 
     private List<QuestionStateSummaryResponse> questions;

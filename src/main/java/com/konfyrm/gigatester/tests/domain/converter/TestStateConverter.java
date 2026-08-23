@@ -16,6 +16,7 @@ public class TestStateConverter {
     public TestStateResponse toResponse(TestState testState) {
         TestStateResponse.TestStateResponseBuilder builder = TestStateResponse.builder()
                 .id(testState.getId())
+                .testId(testState.getTest().getId())
                 .testName(testState.getTest().getName())
                 .questions(testState.getQuestions().stream().map(q -> TestStateResponse.QuestionStateSummaryResponse.builder()
                         .id(q.getId())

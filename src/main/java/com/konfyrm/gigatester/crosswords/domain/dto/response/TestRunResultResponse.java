@@ -15,4 +15,11 @@ public class TestRunResultResponse {
     private int wrongTermCount;
     private int totalTerms;
     private LocalDateTime createdAt;
+
+    /**
+     * Cumulative wrong-answer pool across all runs: a term is in here until it's
+     * answered correctly (removing it), regardless of which run last touched it.
+     * Distinct from wrongTermIds, which is just this one run's result.
+     */
+    private List<UUID> cumulativeWrongTermIds;
 }

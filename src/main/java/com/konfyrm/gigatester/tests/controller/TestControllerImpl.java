@@ -1,9 +1,12 @@
 package com.konfyrm.gigatester.tests.controller;
 
 import com.konfyrm.gigatester.common.domain.TesterEntityType;
+import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.questions.repository.QuestionRepository;
 import com.konfyrm.gigatester.questions.service.QuestionMappingService;
 import com.konfyrm.gigatester.questions.service.impl.QuestionConversionServiceImpl;
+import com.konfyrm.gigatester.tests.domain.dto.enums.TestQuestionDistributionMode;
+import com.konfyrm.gigatester.tests.service.QuestionDistributionUtil;
 import com.konfyrm.gigatester.security.domain.Permission;
 import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroupAccessStatus;
@@ -95,11 +98,21 @@ public class TestControllerImpl implements TestController {
     }
 
     @Override
-    public ResponseEntity<?> getQuestionCounts(UUID testId, List<UUID> tagIds, boolean excludeTags, boolean matchAllTags, User user) {
+    public ResponseEntity<?> getQuestionCounts(UUID testId, List<UUID> tagIds, boolean excludeTags, boolean matchAllTags, int maxPerTag, User user) {
         if (!accessService.hasAccessToTest(testId, user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
         boolean filtered = tagIds != null && !tagIds.isEmpty();
+        if (filtered && !excludeTags && maxPerTag > 0) {
+            long closed = countWithMaxPerTag(testId, TesterEntityType.CLOSED_QUESTION, tagIds, matchAllTags, maxPerTag);
+            long open = countWithMaxPerTag(testId, TesterEntityType.OPEN_QUESTION, tagIds, matchAllTags, maxPerTag);
+            long statement = countWithMaxPerTag(testId, TesterEntityType.STATEMENT_QUESTION, tagIds, matchAllTags, maxPerTag);
+            return ResponseEntity.ok(Map.of(
+                    "closedQuestionsCount", closed,
+                    "openQuestionsCount", open,
+                    "statementQuestionsCount", statement
+            ));
+        }
         int tagCount = filtered ? tagIds.size() : 0;
         long closed = !filtered
                 ? questionRepository.countByTestIdAndType(testId, TesterEntityType.CLOSED_QUESTION.toString())
@@ -133,6 +146,13 @@ public class TestControllerImpl implements TestController {
                 "openQuestionsCount", open,
                 "statementQuestionsCount", statement
         ));
+    }
+
+    private long countWithMaxPerTag(UUID testId, TesterEntityType type, List<UUID> tagIds, boolean matchAllTags, int maxPerTag) {
+        List<Question> pool = matchAllTags
+                ? questionRepository.findRandomQuestionsByAllTags(testId, type.toString(), tagIds, tagIds.size())
+                : questionRepository.findRandomQuestionsByTags(testId, type.toString(), tagIds);
+        return QuestionDistributionUtil.apply(pool, tagIds, false, TestQuestionDistributionMode.MAX_PER_TAG, maxPerTag).size();
     }
 
     @Override

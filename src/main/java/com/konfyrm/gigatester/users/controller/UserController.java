@@ -29,6 +29,10 @@ public interface UserController {
     ResponseEntity<UserResponse> updateBio(@AuthenticationPrincipal User user,
                                            @RequestBody java.util.Map<String, String> body);
 
+    @PutMapping("/me/settings/favourites-tab")
+    ResponseEntity<UserResponse> updateShowFavouritesTab(@AuthenticationPrincipal User user,
+                                                          @RequestBody java.util.Map<String, Boolean> body);
+
     @GetMapping
     ResponseEntity<List<UserResponse>> findAll();
 

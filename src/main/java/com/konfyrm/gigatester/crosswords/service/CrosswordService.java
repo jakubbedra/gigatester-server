@@ -4,6 +4,8 @@ import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTerm;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordStateTermRepository;
+import com.konfyrm.gigatester.pins.domain.PinnedEntityType;
+import com.konfyrm.gigatester.pins.repository.UserPinRepository;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import com.konfyrm.gigatester.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -22,13 +24,16 @@ public class CrosswordService {
     private final CrosswordRepository crosswordRepository;
     private final CrosswordStateTermRepository crosswordStateTermRepository;
     private final UserRepository userRepository;
+    private final UserPinRepository userPinRepository;
 
     public CrosswordService(CrosswordRepository crosswordRepository,
                             CrosswordStateTermRepository crosswordStateTermRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            UserPinRepository userPinRepository) {
         this.crosswordRepository = crosswordRepository;
         this.crosswordStateTermRepository = crosswordStateTermRepository;
         this.userRepository = userRepository;
+        this.userPinRepository = userPinRepository;
     }
 
     public Crossword addCrossword(Crossword crossword) {
@@ -108,10 +113,12 @@ public class CrosswordService {
         return crossword;
     }
 
+    @Transactional
     public void deleteCrossword(UUID id) {
         if (!crosswordRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Crossword with id: " + id + " not found.");
         }
+        userPinRepository.deleteByEntityTypeAndEntityId(PinnedEntityType.CROSSWORD, id);
         crosswordRepository.deleteById(id);
     }
 

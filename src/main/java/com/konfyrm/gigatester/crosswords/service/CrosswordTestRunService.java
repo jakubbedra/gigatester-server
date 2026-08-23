@@ -11,9 +11,11 @@ import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTerm;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTestRun;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTestRunState;
+import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordWrongPool;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordTestRunRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordTestRunStateRepository;
+import com.konfyrm.gigatester.crosswords.repository.CrosswordWrongPoolRepository;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,7 @@ public class CrosswordTestRunService {
 
     private final CrosswordTestRunRepository testRunRepository;
     private final CrosswordTestRunStateRepository testRunStateRepository;
+    private final CrosswordWrongPoolRepository wrongPoolRepository;
     private final CrosswordRepository crosswordRepository;
     private final SubjectGroupAccessService accessService;
 
@@ -38,11 +41,13 @@ public class CrosswordTestRunService {
     public CrosswordTestRunService(
             CrosswordTestRunRepository testRunRepository,
             CrosswordTestRunStateRepository testRunStateRepository,
+            CrosswordWrongPoolRepository wrongPoolRepository,
             CrosswordRepository crosswordRepository,
             SubjectGroupAccessService accessService
     ) {
         this.testRunRepository = testRunRepository;
         this.testRunStateRepository = testRunStateRepository;
+        this.wrongPoolRepository = wrongPoolRepository;
         this.crosswordRepository = crosswordRepository;
         this.accessService = accessService;
     }
@@ -77,9 +82,21 @@ public class CrosswordTestRunService {
             }
         }
         // Not resuming (either not requested, no in-progress run, mode mismatch, or it turned out stale/unresumable) — start fresh.
+        // Starting fresh always discards any prior progress for this (user, crossword): a new run is a reset.
         existing.ifPresent(testRunStateRepository::delete);
 
-        List<CrosswordTerm> terms = selectTerms(crossword, crosswordId, mode, user);
+        List<CrosswordTerm> terms = selectTerms(crossword, crosswordId, mode, user,
+                request.getTagIds(), request.isExcludeTags(), request.isMatchAllTags());
+        if (terms.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No terms match this filter");
+        }
+
+        // Starting a run (ALL or WRONG_ONLY) is a reset for whichever terms it covers
+        // (the tag-filtered set, or everything if no filter) — clear just those from the
+        // wrong pool, leaving pool entries for terms outside the filter untouched. Any
+        // still answered wrong in this run will simply be re-added when it completes.
+        clearFromWrongPool(crossword, user, terms.stream().map(CrosswordTerm::getId).collect(Collectors.toList()));
+
         Collections.shuffle(terms);
 
         CrosswordTestRunState state = CrosswordTestRunState.builder()
@@ -99,19 +116,42 @@ public class CrosswordTestRunService {
                 .build();
     }
 
-    private List<CrosswordTerm> selectTerms(Crossword crossword, UUID crosswordId, String mode, User user) {
+    /**
+     * ALL mode: every crossword term, filtered by tag if requested — always the full
+     * matching set, never reduced by past runs (starting a run is itself a reset).
+     * WRONG_ONLY mode: the cumulative wrong-answer pool (terms answered wrong in any
+     * run and not yet answered correctly since), further narrowed by tag if requested.
+     */
+    private List<CrosswordTerm> selectTerms(Crossword crossword, UUID crosswordId, String mode, User user,
+                                             List<UUID> tagIds, boolean excludeTags, boolean matchAllTags) {
+        List<CrosswordTerm> base;
         if ("WRONG_ONLY".equalsIgnoreCase(mode)) {
-            Optional<CrosswordTestRun> latest = testRunRepository
-                    .findTopByCrossword_IdAndUser_IdAndCompletedTrueOrderByCreatedAtDesc(crosswordId, user.getId());
-            if (latest.isPresent() && latest.get().getWrongTermIds() != null && !latest.get().getWrongTermIds().isBlank()) {
-                Set<UUID> wrongIds = new HashSet<>(parseIds(latest.get().getWrongTermIds()));
-                return crossword.getTerms().stream()
-                        .filter(t -> wrongIds.contains(t.getId()))
-                        .collect(Collectors.toList());
-            }
-            return new ArrayList<>(crossword.getTerms());
+            Set<UUID> wrongIds = getWrongPoolIds(crosswordId, user.getId());
+            base = crossword.getTerms().stream()
+                    .filter(t -> wrongIds.contains(t.getId()))
+                    .collect(Collectors.toList());
+        } else {
+            base = new ArrayList<>(crossword.getTerms());
         }
-        return new ArrayList<>(crossword.getTerms());
+
+        String tagFilterMode = excludeTags ? "EXCLUDE" : null;
+        return CrosswordTagFilter.filter(base, tagIds, tagFilterMode, matchAllTags);
+    }
+
+    private Set<UUID> getWrongPoolIds(UUID crosswordId, UUID userId) {
+        return wrongPoolRepository.findFirstByCrossword_IdAndUser_Id(crosswordId, userId)
+                .map(p -> new HashSet<>(parseIds(p.getWrongTermIds())))
+                .orElseGet(HashSet::new);
+    }
+
+    private void clearFromWrongPool(Crossword crossword, User user, List<UUID> termIds) {
+        wrongPoolRepository.findFirstByCrossword_IdAndUser_Id(crossword.getId(), user.getId()).ifPresent(pool -> {
+            Set<UUID> poolIds = new HashSet<>(parseIds(pool.getWrongTermIds()));
+            if (poolIds.removeAll(termIds)) {
+                pool.setWrongTermIds(poolIds.stream().map(UUID::toString).collect(Collectors.joining(",")));
+                wrongPoolRepository.save(pool);
+            }
+        });
     }
 
     private List<TestRunTermResponse> toTermResponses(List<CrosswordTerm> terms) {
@@ -155,9 +195,38 @@ public class CrosswordTestRunService {
                 .build();
         testRunRepository.save(run);
 
+        Set<UUID> cumulativeWrongIds = testRunStateRepository.findFirstByCrossword_IdAndUser_Id(crosswordId, user.getId())
+                .map(state -> updateWrongPool(crossword, user, parseIds(state.getTermIds()), wrongTermIds))
+                .orElseGet(() -> getWrongPoolIds(crosswordId, user.getId()));
         testRunStateRepository.deleteByCrossword_IdAndUser_Id(crosswordId, user.getId());
 
-        return toResult(run, wrongTermIds);
+        return toResult(run, wrongTermIds, cumulativeWrongIds);
+    }
+
+    /**
+     * Terms answered correctly this run are removed from the cumulative pool (they're
+     * no longer "wrong"); terms answered wrong this run are added, even if they were
+     * previously correct — getting it wrong now means it needs retesting again.
+     */
+    private Set<UUID> updateWrongPool(Crossword crossword, User user, List<UUID> attemptedTermIds, List<UUID> wrongTermIds) {
+        Set<UUID> wrongIds = new HashSet<>(wrongTermIds);
+        Set<UUID> correctIds = attemptedTermIds.stream()
+                .filter(id -> !wrongIds.contains(id))
+                .collect(Collectors.toSet());
+
+        CrosswordWrongPool pool = wrongPoolRepository.findFirstByCrossword_IdAndUser_Id(crossword.getId(), user.getId())
+                .orElseGet(() -> CrosswordWrongPool.builder()
+                        .crossword(crossword)
+                        .user(user)
+                        .wrongTermIds("")
+                        .build());
+
+        Set<UUID> poolIds = new HashSet<>(parseIds(pool.getWrongTermIds()));
+        poolIds.removeAll(correctIds);
+        poolIds.addAll(wrongIds);
+        pool.setWrongTermIds(poolIds.stream().map(UUID::toString).collect(Collectors.joining(",")));
+        wrongPoolRepository.save(pool);
+        return poolIds;
     }
 
     public Optional<TestRunProgressResponse> getInProgressRun(UUID crosswordId, User user) {
@@ -177,17 +246,19 @@ public class CrosswordTestRunService {
         return testRunRepository.findTopByCrossword_IdAndUser_IdAndCompletedTrueOrderByCreatedAtDesc(crosswordId, user.getId())
                 .map(run -> {
                     List<UUID> wrongIds = parseIds(run.getWrongTermIds());
-                    return toResult(run, wrongIds);
+                    Set<UUID> cumulativeWrongIds = getWrongPoolIds(crosswordId, user.getId());
+                    return toResult(run, wrongIds, cumulativeWrongIds);
                 });
     }
 
-    private TestRunResultResponse toResult(CrosswordTestRun run, List<UUID> wrongTermIds) {
+    private TestRunResultResponse toResult(CrosswordTestRun run, List<UUID> wrongTermIds, Set<UUID> cumulativeWrongTermIds) {
         return TestRunResultResponse.builder()
                 .id(run.getId())
                 .wrongTermIds(wrongTermIds)
                 .wrongTermCount(wrongTermIds.size())
                 .totalTerms(run.getTotalTerms())
                 .createdAt(run.getCreatedAt())
+                .cumulativeWrongTermIds(new ArrayList<>(cumulativeWrongTermIds))
                 .build();
     }
 

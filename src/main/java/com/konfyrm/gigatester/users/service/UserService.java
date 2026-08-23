@@ -139,6 +139,12 @@ public class UserService implements UserDetailsService {
         return toResponse(user);
     }
 
+    public UserResponse updateShowFavouritesTab(User user, boolean show) {
+        user.setShowFavouritesTab(show);
+        userRepository.save(user);
+        return toResponse(user);
+    }
+
     public UserResponse assignRole(UUID userId, UUID roleId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -191,6 +197,7 @@ public class UserService implements UserDetailsService {
                 .permissions(permissionService.effectivePermissions(user))
                 .profilePictureUrl(user.getProfilePictureUrl())
                 .bio(user.getBio())
+                .showFavouritesTab(user.isShowFavouritesTab())
                 .build();
     }
 }

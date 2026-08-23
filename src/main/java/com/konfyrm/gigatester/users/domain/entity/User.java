@@ -42,6 +42,18 @@ public class User implements UserDetails {
     private String bio;
 
     /**
+     * Whether the sidebar's "Favourites" section is shown. Boxed so pre-existing
+     * rows (NULL after column add) are treated as true rather than crashing like
+     * a primitive boolean would; null/true both mean "shown".
+     */
+    @Column
+    private Boolean showFavouritesTab;
+
+    public boolean isShowFavouritesTab() {
+        return !Boolean.FALSE.equals(showFavouritesTab);
+    }
+
+    /**
      * DB-configurable permission bundle. Only meaningful for non-admins: their
      * effective permissions are this role's permissions, scoped to the subject
      * groups they own (see SubjectGroup.owners). Admins bypass this entirely.

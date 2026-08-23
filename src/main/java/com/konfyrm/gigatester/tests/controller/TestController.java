@@ -33,6 +33,7 @@ public interface TestController {
             @RequestParam(value = "tagIds", required = false) List<UUID> tagIds,
             @RequestParam(value = "excludeTags", defaultValue = "false") boolean excludeTags,
             @RequestParam(value = "matchAllTags", defaultValue = "false") boolean matchAllTags,
+            @RequestParam(value = "maxPerTag", defaultValue = "0") int maxPerTag,
             @AuthenticationPrincipal User user
     );
 

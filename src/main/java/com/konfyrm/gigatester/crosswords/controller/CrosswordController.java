@@ -16,6 +16,9 @@ public interface CrosswordController {
     @GetMapping("api/v1/crosswords")
     ResponseEntity<?> getCrosswords();
 
+    @GetMapping("api/v1/crosswords/config")
+    ResponseEntity<?> getConfig();
+
     @GetMapping("api/v1/crosswords/{id}")
     ResponseEntity<?> getCrossword(@PathVariable("id") UUID id, @AuthenticationPrincipal User user);
 

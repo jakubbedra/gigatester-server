@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.crosswords.controller;
 
+import com.konfyrm.gigatester.crosswords.config.CrosswordProperties;
 import com.konfyrm.gigatester.crosswords.domain.converter.CrosswordConverter;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordRequest;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
@@ -31,13 +32,15 @@ public class CrosswordControllerImpl implements CrosswordController {
     private final SubjectGroupAccessRepository subjectGroupAccessRepository;
     private final UserRepository userRepository;
     private final PermissionService permissionService;
+    private final CrosswordProperties crosswordProperties;
 
     public CrosswordControllerImpl(CrosswordService crosswordService, CrosswordConverter crosswordConverter,
                                    SubjectRepository subjectRepository,
                                    SubjectGroupRepository subjectGroupRepository,
                                    SubjectGroupAccessRepository subjectGroupAccessRepository,
                                    UserRepository userRepository,
-                                   PermissionService permissionService) {
+                                   PermissionService permissionService,
+                                   CrosswordProperties crosswordProperties) {
         this.crosswordService = crosswordService;
         this.crosswordConverter = crosswordConverter;
         this.subjectRepository = subjectRepository;
@@ -45,6 +48,12 @@ public class CrosswordControllerImpl implements CrosswordController {
         this.subjectGroupAccessRepository = subjectGroupAccessRepository;
         this.userRepository = userRepository;
         this.permissionService = permissionService;
+        this.crosswordProperties = crosswordProperties;
+    }
+
+    @Override
+    public ResponseEntity<?> getConfig() {
+        return ResponseEntity.ok(Map.of("maxWordLimit", crosswordProperties.getMaxWordLimit()));
     }
 
     @Override

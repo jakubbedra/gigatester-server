@@ -1,5 +1,7 @@
 package com.konfyrm.gigatester.tests.service;
 
+import com.konfyrm.gigatester.pins.domain.PinnedEntityType;
+import com.konfyrm.gigatester.pins.repository.UserPinRepository;
 import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
 import com.konfyrm.gigatester.tests.repository.TestRepository;
@@ -20,10 +22,12 @@ public class TestService {
 
     private final TestRepository testRepository;
     private final UserRepository userRepository;
+    private final UserPinRepository userPinRepository;
 
-    public TestService(TestRepository testRepository, UserRepository userRepository) {
+    public TestService(TestRepository testRepository, UserRepository userRepository, UserPinRepository userPinRepository) {
         this.testRepository = testRepository;
         this.userRepository = userRepository;
+        this.userPinRepository = userPinRepository;
     }
 
     public Test addTest(Test test) {
@@ -82,10 +86,12 @@ public class TestService {
         return test;
     }
 
+    @Transactional
     public void deleteTest(UUID testId) {
         if (testRepository.findById(testId).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Test with id: " + testId + " not found.");
         }
+        userPinRepository.deleteByEntityTypeAndEntityId(PinnedEntityType.TEST, testId);
         testRepository.deleteById(testId);
     }
 

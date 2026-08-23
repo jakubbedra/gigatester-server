@@ -19,4 +19,5 @@ public class UserResponse {
     private Set<Permission> permissions;
     private String profilePictureUrl;
     private String bio;
+    private boolean showFavouritesTab;
 }
