@@ -7,6 +7,7 @@ import com.konfyrm.gigatester.pins.repository.UserPinRepository;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +35,7 @@ public class PinService {
                 .build());
     }
 
+    @Transactional
     public void unpin(User user, PinnedEntityType entityType, UUID entityId) {
         userPinRepository.deleteByUser_IdAndEntityTypeAndEntityId(user.getId(), entityType, entityId);
     }

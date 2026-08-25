@@ -61,11 +61,11 @@ public class QuestionReportService {
         questionReportRepository.save(report);
     }
 
-    /** Admins see every unresolved report; everyone else sees only reports for tests they author. */
+    /** Admins see all reports (including resolved); everyone else sees all reports for tests they author. */
     public List<QuestionReportResponse> getReportsForInbox(User user) {
         List<QuestionReport> reports = permissionService.isAdmin(user)
-                ? questionReportRepository.findByResolvedFalseOrderByCreatedAtDesc()
-                : questionReportRepository.findByTest_IdInAndResolvedFalseOrderByCreatedAtDesc(
+                ? questionReportRepository.findAllByOrderByCreatedAtDesc()
+                : questionReportRepository.findByTest_IdInOrderByCreatedAtDesc(
                         testRepository.findByAuthors_Id(user.getId()).stream().map(Test::getId).toList());
         return reports.stream().map(this::toResponse).collect(Collectors.toList());
     }
@@ -95,6 +95,7 @@ public class QuestionReportService {
                 .anonymous(report.isAnonymous())
                 .message(report.getMessage())
                 .createdAt(report.getCreatedAt())
+                .resolved(report.isResolved())
                 .build();
     }
 }

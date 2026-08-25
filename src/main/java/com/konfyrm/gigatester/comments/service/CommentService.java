@@ -3,6 +3,7 @@ package com.konfyrm.gigatester.comments.service;
 import com.konfyrm.gigatester.comments.domain.dto.response.CommentResponse;
 import com.konfyrm.gigatester.comments.domain.entity.Comment;
 import com.konfyrm.gigatester.comments.repository.CommentRepository;
+import com.konfyrm.gigatester.notifications.service.CommentNotificationService;
 import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
@@ -21,11 +22,14 @@ public class CommentService {
     private final SubjectRepository subjectRepository;
     private final CommentRepository commentRepository;
     private final PermissionService permissionService;
+    private final CommentNotificationService notificationService;
 
-    public CommentService(SubjectRepository subjectRepository, CommentRepository commentRepository, PermissionService permissionService) {
+    public CommentService(SubjectRepository subjectRepository, CommentRepository commentRepository,
+                          PermissionService permissionService, CommentNotificationService notificationService) {
         this.subjectRepository = subjectRepository;
         this.commentRepository = commentRepository;
         this.permissionService = permissionService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -39,6 +43,9 @@ public class CommentService {
                 .build();
         subject.getComments().add(comment);
         subjectRepository.save(subject);
+        notificationService.createNotificationsForComment(
+                subject.getId(), subject.getName(), comment.getId(),
+                user.getUsername(), content, user, subject.getAuthors());
         return toResponse(comment, user.getId());
     }
 

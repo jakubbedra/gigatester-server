@@ -13,5 +13,6 @@ public class AccessRequestResponse {
     private UUID userId;
     private String username;
     private UUID groupId;
+    private String groupName;
     private SubjectGroupAccessStatus status;
 }

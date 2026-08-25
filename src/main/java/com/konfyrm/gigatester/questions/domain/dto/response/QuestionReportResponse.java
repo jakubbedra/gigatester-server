@@ -19,4 +19,5 @@ public class QuestionReportResponse {
     private boolean anonymous;
     private String message;
     private LocalDateTime createdAt;
+    private boolean resolved;
 }

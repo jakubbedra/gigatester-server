@@ -59,4 +59,7 @@ public interface SubjectGroupController {
     @GetMapping("api/v1/subject-groups/{id}/owner-candidates")
     ResponseEntity<?> getOwnerCandidates(@PathVariable("id") UUID id);
 
+    @GetMapping("api/v1/subject-groups/all-access-requests")
+    ResponseEntity<?> getAllAccessRequests(@AuthenticationPrincipal User user);
+
 }

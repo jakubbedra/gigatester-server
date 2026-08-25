@@ -10,6 +10,10 @@ public interface QuestionReportRepository extends JpaRepository<QuestionReport, 
 
     List<QuestionReport> findByResolvedFalseOrderByCreatedAtDesc();
 
+    List<QuestionReport> findAllByOrderByCreatedAtDesc();
+
     List<QuestionReport> findByTest_IdInAndResolvedFalseOrderByCreatedAtDesc(List<UUID> testIds);
+
+    List<QuestionReport> findByTest_IdInOrderByCreatedAtDesc(List<UUID> testIds);
 
 }

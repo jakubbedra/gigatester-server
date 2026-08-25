@@ -125,4 +125,10 @@ public class SubjectGroupControllerImpl implements SubjectGroupController {
     public ResponseEntity<?> getOwnerCandidates(UUID id) {
         return ResponseEntity.ok(subjectGroupService.getOwnerCandidates(id));
     }
+
+    @Override
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    public ResponseEntity<?> getAllAccessRequests(User user) {
+        return ResponseEntity.ok(accessService.getAllAccessRequests());
+    }
 }

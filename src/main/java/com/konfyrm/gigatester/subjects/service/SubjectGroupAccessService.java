@@ -64,7 +64,7 @@ public class SubjectGroupAccessService {
                 .stream()
                 .map(r -> new AccessRequestResponse(
                         r.getId(), r.getUser().getId(), r.getUser().getUsername(),
-                        r.getSubjectGroup().getId(), r.getStatus()))
+                        r.getSubjectGroup().getId(), r.getSubjectGroup().getName(), r.getStatus()))
                 .toList();
     }
 
@@ -74,7 +74,16 @@ public class SubjectGroupAccessService {
                 .filter(r -> r.getStatus() != SubjectGroupAccessStatus.DENIED)
                 .map(r -> new AccessRequestResponse(
                         r.getId(), r.getUser().getId(), r.getUser().getUsername(),
-                        r.getSubjectGroup().getId(), r.getStatus()))
+                        r.getSubjectGroup().getId(), r.getSubjectGroup().getName(), r.getStatus()))
+                .toList();
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<AccessRequestResponse> getAllAccessRequests() {
+        return accessRepository.findAll().stream()
+                .map(r -> new AccessRequestResponse(
+                        r.getId(), r.getUser().getId(), r.getUser().getUsername(),
+                        r.getSubjectGroup().getId(), r.getSubjectGroup().getName(), r.getStatus()))
                 .toList();
     }
 
