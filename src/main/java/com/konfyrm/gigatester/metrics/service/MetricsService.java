@@ -9,6 +9,7 @@ import com.konfyrm.gigatester.metrics.repository.UserTestStatRepository;
 import com.konfyrm.gigatester.tags.entity.Tag;
 import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
+import com.konfyrm.gigatester.tests.domain.entity.TestMode;
 import com.konfyrm.gigatester.tests.domain.entity.TestState;
 import com.konfyrm.gigatester.tests.repository.TestRepository;
 import com.konfyrm.gigatester.users.domain.entity.User;
@@ -44,11 +45,28 @@ public class MetricsService {
         this.testRepository = testRepository;
     }
 
+    /** EXAM mode: single pass, so the live question list at completion is the whole attempt. */
     @Transactional
     public void recordTestCompletion(User user, TestState testState) {
         List<QuestionState> questions = testState.getQuestions();
         int total = questions.size();
         int correct = (int) questions.stream().filter(QuestionState::isWasCorrectAnswer).count();
+        saveTestStat(user, testState, total, correct);
+        recordQuestionAttempts(user, questions);
+    }
+
+    /**
+     * LEARNING mode: rounds discard superseded QuestionStates as they're retried,
+     * so the caller (TestStateService) accumulates total/correct across every round
+     * itself and already called recordQuestionAttempts for each one — this only
+     * needs to save the summary row, not repeat the per-question recording.
+     */
+    @Transactional
+    public void recordTestCompletion(User user, TestState testState, int total, int correct) {
+        saveTestStat(user, testState, total, correct);
+    }
+
+    private void saveTestStat(User user, TestState testState, int total, int correct) {
         double scorePercent = total > 0 ? (double) correct / total * 100.0 : 0.0;
         boolean passed = testState.getPassingPercentage() == null || scorePercent >= testState.getPassingPercentage();
 
@@ -61,8 +79,13 @@ public class MetricsService {
                 .correctQuestions(correct)
                 .completedDate(LocalDate.now())
                 .completedAt(LocalDateTime.now())
+                .mode(testState.getMode())
                 .build());
+    }
 
+    /** Upserts UserQuestionStat for every answered question in the given batch — call once per round in LEARNING mode. */
+    @Transactional
+    public void recordQuestionAttempts(User user, List<QuestionState> questions) {
         for (QuestionState qs : questions) {
             if (!qs.isAnswered()) continue;
             UserQuestionStat stat = questionStatRepository
@@ -79,10 +102,14 @@ public class MetricsService {
         }
     }
 
-    public ProgressResponse getProgress(User user, UUID testId) {
+    public ProgressResponse getProgress(User user, UUID testId, TestMode mode, LocalDate from, LocalDate to) {
         List<UserTestStat> stats = testId != null
                 ? testStatRepository.findByUser_IdAndTest_Id(user.getId(), testId)
                 : testStatRepository.findByUser_Id(user.getId());
+        if (mode != null) {
+            stats = stats.stream().filter(s -> s.getMode() == mode).collect(Collectors.toList());
+        }
+        stats = filterByDateRange(stats, from, to);
 
         int totalTestsTaken = stats.size();
         int totalTestsPassed = (int) stats.stream().filter(UserTestStat::isPassed).count();
@@ -125,6 +152,14 @@ public class MetricsService {
                 .build();
     }
 
+    private List<UserTestStat> filterByDateRange(List<UserTestStat> stats, LocalDate from, LocalDate to) {
+        if (from == null && to == null) return stats;
+        return stats.stream()
+                .filter(s -> (from == null || !s.getCompletedDate().isBefore(from))
+                        && (to == null || !s.getCompletedDate().isAfter(to)))
+                .collect(Collectors.toList());
+    }
+
     public List<TagAccuracyDto> getTagStats(User user, UUID testId) {
         Test test = testRepository.findById(testId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -164,10 +199,14 @@ public class MetricsService {
                 .collect(Collectors.toList());
     }
 
-    public List<RankingEntryDto> getRanking(UUID testId, String sortBy) {
+    public List<RankingEntryDto> getRanking(UUID testId, String sortBy, TestMode mode, LocalDate from, LocalDate to) {
         List<UserTestStat> allStats = testId != null
                 ? testStatRepository.findByTest_Id(testId)
                 : testStatRepository.findAll();
+        if (mode != null) {
+            allStats = allStats.stream().filter(s -> s.getMode() == mode).collect(Collectors.toList());
+        }
+        allStats = filterByDateRange(allStats, from, to);
 
         // Pre-load all streaks keyed by userId
         Map<UUID, Integer> streakMap = dailyStreakRepository.findAll().stream()

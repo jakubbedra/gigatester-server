@@ -1,6 +1,7 @@
 package com.konfyrm.gigatester.metrics.domain.entity;
 
 import com.konfyrm.gigatester.tests.domain.entity.Test;
+import com.konfyrm.gigatester.tests.domain.entity.TestMode;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -47,5 +48,15 @@ public class UserTestStat {
 
     @Column(nullable = false)
     private LocalDateTime completedAt;
+
+    /**
+     * Which mode this completion was taken in. Nullable (boxed, not an unboxed
+     * enum ordinal issue since enums are always reference types, but left nullable
+     * so pre-existing rows from before this column existed don't need backfilling)
+     * — treat null as "unknown / legacy" rather than filtering it out entirely.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column
+    private TestMode mode;
 
 }

@@ -34,6 +34,7 @@ public interface TestController {
             @RequestParam(value = "excludeTags", defaultValue = "false") boolean excludeTags,
             @RequestParam(value = "matchAllTags", defaultValue = "false") boolean matchAllTags,
             @RequestParam(value = "maxPerTag", defaultValue = "0") int maxPerTag,
+            @RequestParam(value = "worstOnly", defaultValue = "false") boolean worstOnly,
             @AuthenticationPrincipal User user
     );
 

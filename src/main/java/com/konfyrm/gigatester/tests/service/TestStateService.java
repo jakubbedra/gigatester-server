@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -50,7 +51,7 @@ public class TestStateService {
         if (!accessService.hasAccessToTest(testId, user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
-        TestState testState = testStateFactory.createTestState(testId, testStateRequest);
+        TestState testState = testStateFactory.createTestState(testId, testStateRequest, user);
         testState.setUser(user);
         metricsService.applyWeightedShuffle(testState, user);
         testStateRepository.findFirstByTest_IdAndUser_Id(testId, user.getId())
@@ -103,6 +104,7 @@ public class TestStateService {
         }
         if (testState.getMode() == TestMode.LEARNING && executionState == TestExecutionState.IN_PROGRESS && isLastQuestionIndex(testState)) {
             if (notAllQuestionsAnsweredCorrectly(testState)) {
+                accumulateRound(testState);
                 testState.getQuestions().stream()
                         .filter(q -> !q.isWasCorrectAnswer())
                         .forEach(q -> QuestionStateResetStrategy.getStrategy(q.getQuestion().getType()).reset(q));
@@ -116,26 +118,29 @@ public class TestStateService {
                             q.setWasCorrectAnswer(false);
                             q.setScore(0.0);
                         });
+                accumulateRound(testState);
                 testState.setCurrentQuestionIndex(0);
                 testState.setExecutionState(TestExecutionState.FINISHED);
                 if (testState.getUser() != null) {
                     streakService.recordActivity(testState.getUser());
-                    metricsService.recordTestCompletion(testState.getUser(), testState);
+                    metricsService.recordTestCompletion(testState.getUser(), testState, testState.getCumulativeAttempted(), testState.getCumulativeCorrect());
                 }
             }
         } else if (executionState == TestExecutionState.IN_PROGRESS && testState.getMode() == TestMode.LEARNING && navigateActionDto == NavigateActionDto.FINISH) {
             if (notAllQuestionsAnsweredCorrectly(testState)) {
+                accumulateRound(testState);
                 testState.getQuestions().stream()
                         .filter(q -> !q.isWasCorrectAnswer())
                         .forEach(q -> QuestionStateResetStrategy.getStrategy(q.getQuestion().getType()).reset(q));
                 testState.getQuestions().removeIf(QuestionState::isAnswered);
                 testState.setCurrentQuestionIndex(0);
             } else {
+                accumulateRound(testState);
                 testState.setCurrentQuestionIndex(0);
                 testState.setExecutionState(TestExecutionState.FINISHED);
                 if (testState.getUser() != null) {
                     streakService.recordActivity(testState.getUser());
-                    metricsService.recordTestCompletion(testState.getUser(), testState);
+                    metricsService.recordTestCompletion(testState.getUser(), testState, testState.getCumulativeAttempted(), testState.getCumulativeCorrect());
                 }
             }
         } else if (executionState == TestExecutionState.IN_PROGRESS && testState.getMode() == TestMode.LEARNING) {
@@ -172,6 +177,27 @@ public class TestStateService {
 
 
         testStateRepository.save(testState);
+    }
+
+    /**
+     * Folds the current LEARNING round's outcome into the test's running total/correct
+     * counters and records each answered question's attempt — must be called exactly
+     * once per round, right before that round's QuestionStates get reset/orphan-removed
+     * for retry (or, for the final round, right before completion is recorded).
+     */
+    private void accumulateRound(TestState testState) {
+        List<QuestionState> roundQuestions = testState.getQuestions();
+        int roundTotal = roundQuestions.size();
+        int roundCorrect = (int) roundQuestions.stream().filter(QuestionState::isWasCorrectAnswer).count();
+        testState.setCumulativeAttempted(safeInt(testState.getCumulativeAttempted()) + roundTotal);
+        testState.setCumulativeCorrect(safeInt(testState.getCumulativeCorrect()) + roundCorrect);
+        if (testState.getUser() != null) {
+            metricsService.recordQuestionAttempts(testState.getUser(), roundQuestions);
+        }
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private boolean isUnansweredQuestion(QuestionState questionState, TestExecutionState testExecutionState) {

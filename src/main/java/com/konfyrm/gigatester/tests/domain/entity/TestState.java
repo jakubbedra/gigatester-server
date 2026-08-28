@@ -69,4 +69,19 @@ public class TestState {
     @Column(columnDefinition = "bigint default 0")
     private long startTime;
 
+    /**
+     * LEARNING mode retries wrong questions in rounds, discarding each round's
+     * QuestionStates (orphanRemoval on `questions`) once it's superseded — so by
+     * the time the test finishes, `questions` only holds the last, all-correct
+     * round. These two counters accumulate every round's outcome as it happens,
+     * so final stats reflect every attempt, not just the final round. Boxed and
+     * left nullable so rows from before this column existed don't crash; treat
+     * null as 0 wherever read.
+     */
+    @Builder.Default
+    private Integer cumulativeAttempted = 0;
+
+    @Builder.Default
+    private Integer cumulativeCorrect = 0;
+
 }

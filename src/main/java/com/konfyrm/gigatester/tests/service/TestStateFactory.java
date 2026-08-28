@@ -2,6 +2,8 @@ package com.konfyrm.gigatester.tests.service;
 
 import com.google.common.collect.ImmutableList;
 import com.konfyrm.gigatester.common.domain.TesterEntityType;
+import com.konfyrm.gigatester.metrics.domain.entity.UserQuestionStat;
+import com.konfyrm.gigatester.metrics.repository.UserQuestionStatRepository;
 import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.questions.repository.QuestionRepository;
 import com.konfyrm.gigatester.tests.domain.converter.TestDisplayTypeToDtoConverter;
@@ -11,27 +13,32 @@ import com.konfyrm.gigatester.tests.domain.dto.enums.TestQuestionDistributionMod
 import com.konfyrm.gigatester.tests.domain.dto.request.TestStateRequest;
 import com.konfyrm.gigatester.tests.domain.entity.*;
 import com.konfyrm.gigatester.tests.repository.TestRepository;
+import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class TestStateFactory {
 
     private final TestRepository testRepository;
     private final QuestionRepository questionRepository;
+    private final UserQuestionStatRepository userQuestionStatRepository;
 
     @Autowired
     public TestStateFactory(
             TestRepository testRepository,
-            QuestionRepository questionRepository
+            QuestionRepository questionRepository,
+            UserQuestionStatRepository userQuestionStatRepository
     ) {
         this.testRepository = testRepository;
         this.questionRepository = questionRepository;
+        this.userQuestionStatRepository = userQuestionStatRepository;
     }
 
-    public TestState createTestState(UUID testId, TestStateRequest request) {
+    public TestState createTestState(UUID testId, TestStateRequest request, User user) {
         Optional<Test> testOptional = testRepository.findById(testId);
         if (testOptional.isEmpty()) {
             throw new IllegalArgumentException("Test with id: " + testId + " not found.");
@@ -52,13 +59,15 @@ public class TestStateFactory {
         if (request.getPassingPercentage() != null) {
             builder.passingPercentage(request.getPassingPercentage());
         }
-        return createQuestionStates(testId, builder, request).build();
+        return createQuestionStates(testId, builder, request, user).build();
     }
 
     public void resetTestState(TestState testState) {
         testState.setCurrentQuestionIndex(0);
         testState.setExecutionState(TestExecutionState.IN_PROGRESS);
         testState.setStartTime(System.currentTimeMillis());
+        testState.setCumulativeAttempted(0);
+        testState.setCumulativeCorrect(0);
         resetQuestionStates(testState);
     }
 
@@ -97,7 +106,7 @@ public class TestStateFactory {
         }
     }
 
-    private TestState.TestStateBuilder createQuestionStates(UUID testId, TestState.TestStateBuilder builder, TestStateRequest request) {
+    private TestState.TestStateBuilder createQuestionStates(UUID testId, TestState.TestStateBuilder builder, TestStateRequest request, User user) {
         List<UUID> tagIds = request.getTagIds();
         boolean exclude = request.isExcludeTags();
         boolean matchAll = request.isMatchAllTags();
@@ -105,9 +114,9 @@ public class TestStateFactory {
                 ? request.getDistributionMode() : TestQuestionDistributionMode.RANDOM;
         int maxPerTag = request.getMaxPerTag();
         if (request.getMode() == TestModeDto.LEARNING) {
-            List<QuestionState> closedQuestionStates = fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, tagIds, exclude, matchAll, distributionMode, maxPerTag);
-            List<QuestionState> openQuestionStates = fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, tagIds, exclude, matchAll, distributionMode, maxPerTag);
-            List<QuestionState> statementQuestionStates = fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, tagIds, exclude, matchAll, distributionMode, maxPerTag);
+            List<QuestionState> closedQuestionStates = fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, tagIds, exclude, matchAll, distributionMode, maxPerTag, user);
+            List<QuestionState> openQuestionStates = fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, tagIds, exclude, matchAll, distributionMode, maxPerTag, user);
+            List<QuestionState> statementQuestionStates = fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, tagIds, exclude, matchAll, distributionMode, maxPerTag, user);
             ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
                     .addAll(closedQuestionStates)
                     .addAll(openQuestionStates)
@@ -124,9 +133,9 @@ public class TestStateFactory {
                     .closedQuestionsCount(closedQuestionStates.size());
         }
         ArrayList<QuestionState> questionStates = new ArrayList<>(ImmutableList.<QuestionState>builder()
-                .addAll(fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, request.getClosedQuestionsCount(), tagIds, exclude, matchAll, distributionMode, maxPerTag))
-                .addAll(fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, request.getOpenQuestionsCount(), tagIds, exclude, matchAll, distributionMode, maxPerTag))
-                .addAll(fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, request.getStatementQuestionsCount(), tagIds, exclude, matchAll, distributionMode, maxPerTag))
+                .addAll(fetchQuestions(testId, TesterEntityType.CLOSED_QUESTION, request.getClosedQuestionsCount(), tagIds, exclude, matchAll, distributionMode, maxPerTag, user))
+                .addAll(fetchQuestions(testId, TesterEntityType.OPEN_QUESTION, request.getOpenQuestionsCount(), tagIds, exclude, matchAll, distributionMode, maxPerTag, user))
+                .addAll(fetchQuestions(testId, TesterEntityType.STATEMENT_QUESTION, request.getStatementQuestionsCount(), tagIds, exclude, matchAll, distributionMode, maxPerTag, user))
                 .build());
         Collections.shuffle(questionStates);
         int order = 0;
@@ -151,20 +160,45 @@ public class TestStateFactory {
     }
 
     private List<QuestionState> fetchQuestions(UUID testId, TesterEntityType entityType, List<UUID> tagIds, boolean exclude, boolean matchAll,
-                                                TestQuestionDistributionMode distributionMode, int maxPerTag) {
+                                                TestQuestionDistributionMode distributionMode, int maxPerTag, User user) {
         QuestionStateCreationStrategy strategy = QuestionStateCreationStrategy.getStrategy(entityType);
         List<Question> pool = fetchCandidatePool(testId, entityType, tagIds, exclude, matchAll);
-        List<Question> distributed = QuestionDistributionUtil.apply(pool, tagIds, exclude, distributionMode, maxPerTag);
+        List<Question> distributed = distributionMode == TestQuestionDistributionMode.WORST
+                ? sortByWorst(pool, user)
+                : QuestionDistributionUtil.apply(pool, tagIds, exclude, distributionMode, maxPerTag);
         return distributed.stream().map(strategy::createQuestionState).toList();
     }
 
     private List<QuestionState> fetchQuestions(UUID testId, TesterEntityType entityType, int count, List<UUID> tagIds, boolean exclude, boolean matchAll,
-                                                TestQuestionDistributionMode distributionMode, int maxPerTag) {
+                                                TestQuestionDistributionMode distributionMode, int maxPerTag, User user) {
         QuestionStateCreationStrategy strategy = QuestionStateCreationStrategy.getStrategy(entityType);
         List<Question> pool = fetchCandidatePool(testId, entityType, tagIds, exclude, matchAll);
-        List<Question> distributed = QuestionDistributionUtil.apply(pool, tagIds, exclude, distributionMode, maxPerTag);
+        List<Question> distributed = distributionMode == TestQuestionDistributionMode.WORST
+                ? sortByWorst(pool, user)
+                : QuestionDistributionUtil.apply(pool, tagIds, exclude, distributionMode, maxPerTag);
         List<Question> limited = distributed.size() > count ? distributed.subList(0, count) : distributed;
         return limited.stream().map(strategy::createQuestionState).toList();
+    }
+
+    /**
+     * Orders candidates by this user's error rate on them, worst first, so a later
+     * subList(0, count) picks "the X questions I get wrong the most". Questions never
+     * attempted rank last (there's no evidence they're a weak spot), below any question
+     * with a genuine error rate — even 0%.
+     */
+    private List<Question> sortByWorst(List<Question> pool, User user) {
+        List<UUID> ids = pool.stream().map(Question::getId).toList();
+        Map<UUID, UserQuestionStat> statsByQuestionId = userQuestionStatRepository
+                .findByUser_IdAndQuestion_IdIn(user.getId(), ids).stream()
+                .collect(Collectors.toMap(s -> s.getQuestion().getId(), s -> s));
+        return pool.stream()
+                .sorted(Comparator.comparingDouble((Question q) -> errorRate(statsByQuestionId.get(q.getId()))).reversed())
+                .collect(Collectors.toList());
+    }
+
+    private double errorRate(UserQuestionStat stat) {
+        if (stat == null || stat.getTimesAnswered() == 0) return -1.0;
+        return (double) (stat.getTimesAnswered() - stat.getTimesCorrect()) / stat.getTimesAnswered();
     }
 
     private List<QuestionState> resetQuestionStates(UUID testId, TesterEntityType entityType, int count) {

@@ -1,6 +1,8 @@
 package com.konfyrm.gigatester.tests.controller;
 
 import com.konfyrm.gigatester.common.domain.TesterEntityType;
+import com.konfyrm.gigatester.metrics.domain.entity.UserQuestionStat;
+import com.konfyrm.gigatester.metrics.repository.UserQuestionStatRepository;
 import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.questions.repository.QuestionRepository;
 import com.konfyrm.gigatester.questions.service.QuestionMappingService;
@@ -40,6 +42,7 @@ public class TestControllerImpl implements TestController {
     private final SubjectGroupAccessRepository subjectGroupAccessRepository;
     private final UserRepository userRepository;
     private final PermissionService permissionService;
+    private final UserQuestionStatRepository userQuestionStatRepository;
 
     public TestControllerImpl(TestService testService, TestConverter testConverter,
                               QuestionRepository questionRepository,
@@ -48,7 +51,8 @@ public class TestControllerImpl implements TestController {
                               SubjectGroupRepository subjectGroupRepository,
                               SubjectGroupAccessRepository subjectGroupAccessRepository,
                               UserRepository userRepository,
-                              PermissionService permissionService) {
+                              PermissionService permissionService,
+                              UserQuestionStatRepository userQuestionStatRepository) {
         this.testService = testService;
         this.testConverter = testConverter;
         this.questionRepository = questionRepository;
@@ -58,6 +62,7 @@ public class TestControllerImpl implements TestController {
         this.subjectGroupAccessRepository = subjectGroupAccessRepository;
         this.userRepository = userRepository;
         this.permissionService = permissionService;
+        this.userQuestionStatRepository = userQuestionStatRepository;
     }
 
     @Override
@@ -98,11 +103,21 @@ public class TestControllerImpl implements TestController {
     }
 
     @Override
-    public ResponseEntity<?> getQuestionCounts(UUID testId, List<UUID> tagIds, boolean excludeTags, boolean matchAllTags, int maxPerTag, User user) {
+    public ResponseEntity<?> getQuestionCounts(UUID testId, List<UUID> tagIds, boolean excludeTags, boolean matchAllTags, int maxPerTag, boolean worstOnly, User user) {
         if (!accessService.hasAccessToTest(testId, user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
         boolean filtered = tagIds != null && !tagIds.isEmpty();
+        if (worstOnly) {
+            long closed = countWorst(testId, TesterEntityType.CLOSED_QUESTION, tagIds, excludeTags, matchAllTags, user);
+            long open = countWorst(testId, TesterEntityType.OPEN_QUESTION, tagIds, excludeTags, matchAllTags, user);
+            long statement = countWorst(testId, TesterEntityType.STATEMENT_QUESTION, tagIds, excludeTags, matchAllTags, user);
+            return ResponseEntity.ok(Map.of(
+                    "closedQuestionsCount", closed,
+                    "openQuestionsCount", open,
+                    "statementQuestionsCount", statement
+            ));
+        }
         if (filtered && !excludeTags && maxPerTag > 0) {
             long closed = countWithMaxPerTag(testId, TesterEntityType.CLOSED_QUESTION, tagIds, matchAllTags, maxPerTag);
             long open = countWithMaxPerTag(testId, TesterEntityType.OPEN_QUESTION, tagIds, matchAllTags, maxPerTag);
@@ -153,6 +168,27 @@ public class TestControllerImpl implements TestController {
                 ? questionRepository.findRandomQuestionsByAllTags(testId, type.toString(), tagIds, tagIds.size())
                 : questionRepository.findRandomQuestionsByTags(testId, type.toString(), tagIds);
         return QuestionDistributionUtil.apply(pool, tagIds, false, TestQuestionDistributionMode.MAX_PER_TAG, maxPerTag).size();
+    }
+
+    private long countWorst(UUID testId, TesterEntityType type, List<UUID> tagIds, boolean excludeTags, boolean matchAllTags, User user) {
+        boolean filtered = tagIds != null && !tagIds.isEmpty();
+        List<Question> pool;
+        if (!filtered) {
+            pool = questionRepository.findAllByTestIdAndType(testId, type.toString());
+        } else if (excludeTags && matchAllTags) {
+            pool = questionRepository.findRandomQuestionsExcludingAllTags(testId, type.toString(), tagIds, tagIds.size());
+        } else if (excludeTags) {
+            pool = questionRepository.findRandomQuestionsExcludingTags(testId, type.toString(), tagIds);
+        } else if (matchAllTags) {
+            pool = questionRepository.findRandomQuestionsByAllTags(testId, type.toString(), tagIds, tagIds.size());
+        } else {
+            pool = questionRepository.findRandomQuestionsByTags(testId, type.toString(), tagIds);
+        }
+        List<UUID> ids = pool.stream().map(Question::getId).toList();
+        if (ids.isEmpty()) return 0;
+        return userQuestionStatRepository.findByUser_IdAndQuestion_IdIn(user.getId(), ids).stream()
+                .filter(s -> s.getTimesAnswered() > 0 && s.getTimesCorrect() < s.getTimesAnswered())
+                .count();
     }
 
     @Override
