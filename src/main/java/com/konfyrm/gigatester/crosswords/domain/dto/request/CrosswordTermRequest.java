@@ -13,6 +13,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CrosswordTermRequest {
 
+    /** Null for a genuinely new term; set to an existing term's id when editing it in place. */
+    private UUID id;
+
     private String term;
 
     private String clue;

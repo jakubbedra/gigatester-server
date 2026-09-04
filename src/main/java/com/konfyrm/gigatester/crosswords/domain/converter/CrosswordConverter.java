@@ -39,6 +39,7 @@ public class CrosswordConverter {
                         .map(t -> {
                             List<Tag> tags = resolveTags(t.getTagIds());
                             return CrosswordTerm.builder()
+                                    .id(t.getId())
                                     .term(t.getTerm())
                                     .clue(t.getClue())
                                     .clueType(t.getClueType())

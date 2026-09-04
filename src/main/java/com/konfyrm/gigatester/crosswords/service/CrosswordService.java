@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -56,36 +58,37 @@ public class CrosswordService {
 
         existing.setName(incoming.getName());
 
-        Set<String> incomingTerms = incoming.getTerms().stream()
-                .map(t -> t.getTerm().toUpperCase())
+        // Identity is the term's id, not its text — two terms can legitimately share the
+        // same word (e.g. the same answer with two different clues), and matching by text
+        // used to silently merge a "duplicate" addition into the existing term instead of
+        // adding it as a second entry.
+        Map<UUID, CrosswordTerm> existingById = existing.getTerms().stream()
+                .collect(Collectors.toMap(CrosswordTerm::getId, t -> t));
+        Set<UUID> incomingIds = incoming.getTerms().stream()
+                .map(CrosswordTerm::getId)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         // Remove terms no longer in the list, but only if no game state references them
         existing.getTerms().removeIf(t ->
-                !incomingTerms.contains(t.getTerm().toUpperCase())
+                !incomingIds.contains(t.getId())
                 && !crosswordStateTermRepository.existsByCrosswordTermId(t.getId())
         );
 
-        Set<String> remainingTerms = existing.getTerms().stream()
-                .map(t -> t.getTerm().toUpperCase())
-                .collect(Collectors.toSet());
-
-        // Update clue/clueType for terms that already exist, add genuinely new ones
+        // Update terms that already exist (matched by id), add genuinely new ones
         for (CrosswordTerm incomingTerm : incoming.getTerms()) {
-            String upper = incomingTerm.getTerm().toUpperCase();
-            if (remainingTerms.contains(upper)) {
-                existing.getTerms().stream()
-                        .filter(t -> t.getTerm().equalsIgnoreCase(incomingTerm.getTerm()))
-                        .findFirst()
-                        .ifPresent(t -> {
-                            t.setClue(incomingTerm.getClue());
-                            t.setClueType(incomingTerm.getClueType());
-                            t.getTags().clear();
-                            if (incomingTerm.getTags() != null) {
-                                t.getTags().addAll(incomingTerm.getTags());
-                            }
-                        });
+            CrosswordTerm match = incomingTerm.getId() != null ? existingById.get(incomingTerm.getId()) : null;
+            if (match != null && existing.getTerms().contains(match)) {
+                match.setTerm(incomingTerm.getTerm());
+                match.setClue(incomingTerm.getClue());
+                match.setClueType(incomingTerm.getClueType());
+                match.getTags().clear();
+                if (incomingTerm.getTags() != null) {
+                    match.getTags().addAll(incomingTerm.getTags());
+                }
             } else {
+                // Defensive: a stale/foreign id must not collide with — or overwrite — another row.
+                incomingTerm.setId(null);
                 existing.getTerms().add(incomingTerm);
             }
         }
