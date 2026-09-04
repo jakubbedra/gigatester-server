@@ -13,7 +13,9 @@ import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +30,10 @@ public class CrosswordConverter {
     }
 
     public Crossword toEntity(CrosswordRequest request) {
+        // Only stamped on terms that turn out to be genuinely new — CrosswordService.updateCrossword
+        // discards this object (keeping the original entity, and its original createdAt) for any
+        // term that matches an existing one, so this timestamp only ever "sticks" for real additions.
+        Instant now = Instant.now();
         List<CrosswordTerm> terms = request.getTerms() == null ? List.of() :
                 request.getTerms().stream()
                         .map(t -> {
@@ -37,6 +43,7 @@ public class CrosswordConverter {
                                     .clue(t.getClue())
                                     .clueType(t.getClueType())
                                     .tags(tags)
+                                    .createdAt(now)
                                     .build();
                         })
                         .toList();
@@ -50,6 +57,9 @@ public class CrosswordConverter {
     public CrosswordResponse toResponse(Crossword crossword) {
         List<CrosswordTermResponse> terms = crossword.getTerms() == null ? List.of() :
                 crossword.getTerms().stream()
+                        .sorted(Comparator.comparing(
+                                (CrosswordTerm t) -> t.getCreatedAt() == null ? Instant.MIN : t.getCreatedAt(),
+                                Comparator.reverseOrder()))
                         .map(t -> CrosswordTermResponse.builder()
                                 .id(t.getId())
                                 .term(t.getTerm())
