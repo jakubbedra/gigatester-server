@@ -41,6 +41,7 @@ public class QuestionStateControllerImpl implements QuestionStateController {
         QuestionState answerQuestionState = questionStateService.checkQuestion(request, stateId);
 
         questionStateService.saveQuestionState(answerQuestionState);
+        testStateService.recordLearningQuestionAttempt(testStateId, answerQuestionState);
 
         return ResponseEntity.noContent().build();
     }

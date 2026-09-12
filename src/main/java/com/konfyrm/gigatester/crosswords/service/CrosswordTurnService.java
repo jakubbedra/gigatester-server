@@ -1,16 +1,20 @@
 package com.konfyrm.gigatester.crosswords.service;
 
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordLetterRequest;
+import com.konfyrm.gigatester.crosswords.domain.dto.request.SubmitWordRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.CompletedWordResult;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.TurnCellResult;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.TurnResultResponse;
+import com.konfyrm.gigatester.crosswords.domain.dto.response.WordTurnResultResponse;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordPlayer;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordStateTerm;
 import com.konfyrm.gigatester.crosswords.domain.entity.enums.BotDifficulty;
 import com.konfyrm.gigatester.crosswords.domain.entity.enums.Direction;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
@@ -21,6 +25,99 @@ public class CrosswordTurnService {
     private static final Random RANDOM = new Random();
 
     public record TurnOutcome(CrosswordState state, TurnResultResponse result) {}
+
+    public record WordTurnOutcome(CrosswordState state, WordTurnResultResponse result) {}
+
+    /**
+     * WORDS mode: the player names a whole word for one clue. A correct answer fills that
+     * word into the grid and scores exactly its length; a wrong answer scores nothing (never
+     * negative). The bot then gets its own turn at a random unsolved word, with per-difficulty
+     * odds of actually solving it, mirroring the letters-per-turn scaling used in LETTERS mode.
+     */
+    public WordTurnOutcome processWordTurn(CrosswordState state, SubmitWordRequest request) {
+        CrosswordPlayer human = findHuman(state);
+        CrosswordPlayer bot = findBot(state);
+
+        CrosswordStateTerm term = state.getTerms().stream()
+                .filter(t -> t.getId().equals(request.getTermId()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Word not found in this crossword"));
+        if (term.isSolved()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That word has already been solved");
+        }
+
+        String answer = normalizeWord(term.getCrosswordTerm().getTerm());
+        String guess = normalizeWord(request.getWord());
+        boolean correct = !answer.isEmpty() && answer.equals(guess);
+
+        String humanWord = null;
+        int humanPoints = 0;
+        if (correct) {
+            fillWord(state, term);
+            term.setSolved(true);
+            humanPoints = answer.length();
+            human.setPoints(human.getPoints() + humanPoints);
+            humanWord = answer;
+        }
+
+        // Bot's turn: it always attempts a random still-unsolved word, but — like a human
+        // guessing — only actually gets it right some of the time, per difficulty. A miss
+        // is a real, visible whiff (botAttempted && !botCorrect), not a silently skipped turn.
+        List<CrosswordStateTerm> unsolved = state.getTerms().stream().filter(t -> !t.isSolved()).toList();
+        boolean botAttempted = !unsolved.isEmpty();
+        boolean botCorrect = botAttempted && RANDOM.nextInt(100) < botWordSolveChance(state.getBotDifficulty());
+        String botWord = null;
+        int botPoints = 0;
+        if (botCorrect) {
+            CrosswordStateTerm botTerm = unsolved.get(RANDOM.nextInt(unsolved.size()));
+            fillWord(state, botTerm);
+            botTerm.setSolved(true);
+            botWord = CrosswordTextUtils.toGridCase(botTerm.getCrosswordTerm().getTerm());
+            botPoints = botWord.length();
+            bot.setPoints(bot.getPoints() + botPoints);
+        }
+
+        WordTurnResultResponse result = WordTurnResultResponse.builder()
+                .humanCorrect(correct)
+                .humanWord(humanWord)
+                .humanPoints(humanPoints)
+                .botAttempted(botAttempted)
+                .botCorrect(botCorrect)
+                .botWord(botWord)
+                .botPoints(botPoints)
+                .build();
+
+        return new WordTurnOutcome(state, result);
+    }
+
+    private int botWordSolveChance(BotDifficulty difficulty) {
+        BotDifficulty effective = difficulty != null ? difficulty : BotDifficulty.NORMAL;
+        return switch (effective) {
+            case EASY -> 20;
+            case NORMAL -> 70;
+            case HARD -> 85;
+            case IMPOSSIBLE -> 100;
+        };
+    }
+
+    private void fillWord(CrosswordState state, CrosswordStateTerm term) {
+        String word = CrosswordTextUtils.toGridCase(term.getCrosswordTerm().getTerm());
+        int r = term.getRow(), c = term.getColumn();
+        int dr = term.getDirection() == Direction.DOWN ? 1 : 0;
+        int dc = term.getDirection() == Direction.ACROSS ? 1 : 0;
+        for (int i = 0; i < word.length(); i++) {
+            int rr = r + dr * i, cc = c + dc * i;
+            if (state.currentAt(rr, cc) == CrosswordState.UNCOVERED_FIELD) {
+                state.setCurrentAt(rr, cc, state.solutionAt(rr, cc));
+            }
+        }
+    }
+
+    /** Grid-case, trimmed, and internal whitespace runs collapsed to one space, for forgiving word matching. */
+    private String normalizeWord(String raw) {
+        if (raw == null) return "";
+        return CrosswordTextUtils.toGridCase(raw.trim().replaceAll("\\s+", " "));
+    }
 
     public TurnOutcome processTurn(CrosswordState state, List<CrosswordLetterRequest> letters) {
         CrosswordPlayer human = findHuman(state);

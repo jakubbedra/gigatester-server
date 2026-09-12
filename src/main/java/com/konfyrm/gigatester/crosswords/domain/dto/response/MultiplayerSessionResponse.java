@@ -21,8 +21,14 @@ public class MultiplayerSessionResponse {
     private PlayerInfo player2;
 
     private String status;
+    private String mode;
     private UUID currentTurnUserId;
     private boolean myTurn;
+
+    /** Set only on the response to a WORDS-mode word submission; null otherwise. */
+    private Boolean lastGuessCorrect;
+    private String lastGuessWord;
+    private Integer lastGuessPoints;
 
     private String currentGrid;
     private int width;

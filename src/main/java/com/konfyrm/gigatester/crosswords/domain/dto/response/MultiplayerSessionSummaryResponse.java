@@ -17,6 +17,7 @@ public class MultiplayerSessionSummaryResponse {
     private String crosswordName;
     private MultiplayerSessionResponse.PlayerInfo opponent;
     private String status;
+    private String mode;
     private boolean myTurn;
     private int myScore;
     private int opponentScore;

@@ -5,6 +5,7 @@ import com.konfyrm.gigatester.crosswords.domain.dto.response.CrosswordPlayerResp
 import com.konfyrm.gigatester.crosswords.domain.dto.response.CrosswordStateClueResponse;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.CrosswordStateResponse;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.TurnResultResponse;
+import com.konfyrm.gigatester.crosswords.domain.dto.response.WordTurnResultResponse;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordPlayer;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordStateTerm;
@@ -22,6 +23,12 @@ public class CrosswordStateConverter {
         return response;
     }
 
+    public CrosswordStateResponse toResponse(CrosswordState state, WordTurnResultResponse wordTurnResult) {
+        CrosswordStateResponse response = toResponse(state);
+        response.setLastWordTurn(wordTurnResult);
+        return response;
+    }
+
     public CrosswordStateResponse toResponse(CrosswordState state) {
         return CrosswordStateResponse.builder()
                 .id(state.getId())
@@ -30,6 +37,7 @@ public class CrosswordStateConverter {
                 .currentGrid(state.getCurrentGrid())
                 .width(state.getWidth())
                 .height(state.getHeight())
+                .mode(state.effectiveMode().name())
                 .players(toPlayerResponses(state.getPlayers()))
                 .clues(toClueResponses(state.getTerms()))
                 .build();
@@ -58,6 +66,7 @@ public class CrosswordStateConverter {
                         .row(t.getRow())
                         .column(t.getColumn())
                         .direction(t.getDirection() == Direction.ACROSS ? DirectionDto.ACROSS : DirectionDto.DOWN)
+                        .solved(t.isSolved())
                         .build())
                 .toList();
     }

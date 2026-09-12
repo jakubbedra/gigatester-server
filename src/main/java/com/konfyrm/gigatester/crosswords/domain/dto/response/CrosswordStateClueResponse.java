@@ -25,4 +25,7 @@ public class CrosswordStateClueResponse {
 
     private DirectionDto direction;
 
+    /** WORDS-mode multiplayer: true once this word has been correctly guessed and locked. Always false elsewhere. */
+    private boolean solved;
+
 }

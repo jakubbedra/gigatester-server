@@ -29,4 +29,15 @@ public class CrosswordStateTerm {
 
     private Direction direction;
 
+    /**
+     * WORDS mode only: true once the player (or the bot) has correctly guessed this
+     * whole word. Boxed and null-tolerant so rows created before this column existed
+     * still read (null == not solved). Locks the word so it can't be scored twice.
+     */
+    private Boolean solved;
+
+    public boolean isSolved() {
+        return Boolean.TRUE.equals(solved);
+    }
+
 }

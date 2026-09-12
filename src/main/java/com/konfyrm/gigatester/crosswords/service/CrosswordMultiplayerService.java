@@ -3,6 +3,7 @@ package com.konfyrm.gigatester.crosswords.service;
 import com.konfyrm.gigatester.crosswords.domain.dto.enums.DirectionDto;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordLetterRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateRequest;
+import com.konfyrm.gigatester.crosswords.domain.dto.request.SubmitWordRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.CrosswordStateClueResponse;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.domain.dto.response.MultiplayerSessionResponse;
@@ -65,13 +66,17 @@ public class CrosswordMultiplayerService {
                         .build())
                 .collect(Collectors.toList());
 
-        String player1Hand = drawHandFromGrid(generated, 5, new ArrayList<>());
+        CrosswordPlayMode mode = parseMode(request.getMultiplayerMode());
+        // WORDS mode has no letter hand — you type whole words instead.
+        String player1Hand = mode == CrosswordPlayMode.WORDS
+                ? "" : drawHandFromGrid(generated, 5, new ArrayList<>());
 
         CrosswordMultiplayerSession session = CrosswordMultiplayerSession.builder()
                 .crossword(crossword)
                 .player1(player1)
                 .player2(null)
                 .status(CrosswordMultiplayerStatus.WAITING_FOR_PLAYER)
+                .mode(mode)
                 .currentTurnUserId(player1.getId())
                 .solutionGrid(generated.getSolutionGrid())
                 .currentGrid(generated.getCurrentGrid())
@@ -103,8 +108,9 @@ public class CrosswordMultiplayerService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to this crossword");
         }
 
-        List<Character> alreadyDealt = new ArrayList<>(handAsList(session.getPlayer1Hand()));
-        String player2Hand = drawHandFromGrid(session, 5, alreadyDealt);
+        String player2Hand = session.effectiveMode() == CrosswordPlayMode.WORDS
+                ? ""
+                : drawHandFromGrid(session, 5, new ArrayList<>(handAsList(session.getPlayer1Hand())));
 
         session.setPlayer2(player2);
         session.setPlayer2Hand(player2Hand);
@@ -120,6 +126,9 @@ public class CrosswordMultiplayerService {
 
         if (session.getStatus() != CrosswordMultiplayerStatus.IN_PROGRESS) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Session is not in progress");
+        }
+        if (session.effectiveMode() != CrosswordPlayMode.LETTERS) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This session is played by typing whole words");
         }
         if (!session.getCurrentTurnUserId().equals(user.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Not your turn");
@@ -192,6 +201,89 @@ public class CrosswordMultiplayerService {
 
         session = sessionRepository.save(session);
         return toResponse(session, user.getId());
+    }
+
+    /**
+     * WORDS mode: the current player names a whole word for one clue. A correct answer
+     * fills that word into the grid and scores exactly its length; a wrong answer scores
+     * nothing (never negative). The turn always passes to the opponent afterwards.
+     */
+    @Transactional
+    public MultiplayerSessionResponse submitWord(UUID sessionId, SubmitWordRequest request, User user) {
+        CrosswordMultiplayerSession session = findSession(sessionId);
+
+        if (session.getStatus() != CrosswordMultiplayerStatus.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Session is not in progress");
+        }
+        if (session.effectiveMode() != CrosswordPlayMode.WORDS) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This session is played by placing letters");
+        }
+        if (!session.getCurrentTurnUserId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Not your turn");
+        }
+
+        CrosswordMultiplayerTerm term = session.getTerms().stream()
+                .filter(t -> t.getId().equals(request.getTermId()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Word not found in this session"));
+        if (term.isSolved()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That word has already been solved");
+        }
+
+        String answer = normalizeWord(term.getCrosswordTerm().getTerm());
+        String guess = normalizeWord(request.getWord());
+        boolean correct = !answer.isEmpty() && answer.equals(guess);
+
+        Integer gained = null;
+        if (correct) {
+            fillWord(session, term);
+            term.setSolved(true);
+            gained = answer.length();
+            boolean isPlayer1 = session.getPlayer1().getId().equals(user.getId());
+            if (isPlayer1) {
+                session.setPlayer1Points(session.getPlayer1Points() + gained);
+            } else {
+                session.setPlayer2Points(session.getPlayer2Points() + gained);
+            }
+        }
+
+        // Turn always passes, whether the guess was right or wrong.
+        UUID opponentId = session.getPlayer1().getId().equals(user.getId())
+                ? session.getPlayer2().getId() : session.getPlayer1().getId();
+        session.setCurrentTurnUserId(opponentId);
+
+        if (session.getTerms().stream().allMatch(CrosswordMultiplayerTerm::isSolved)) {
+            session.setStatus(CrosswordMultiplayerStatus.FINISHED);
+        }
+
+        session = sessionRepository.save(session);
+        // Only echo the word back when it was right (it's now visible in the grid anyway) —
+        // never hand the opponent's client the answer to a word they got wrong.
+        return toResponse(session, user.getId(), correct, correct ? answer : null, gained);
+    }
+
+    /** Reveals every still-hidden cell of the given term using the solution grid. */
+    private void fillWord(CrosswordMultiplayerSession session, CrosswordMultiplayerTerm term) {
+        String word = CrosswordTextUtils.toGridCase(term.getCrosswordTerm().getTerm());
+        int r = term.getRow(), c = term.getColumn();
+        int dr = term.getDirection() == Direction.DOWN ? 1 : 0;
+        int dc = term.getDirection() == Direction.ACROSS ? 1 : 0;
+        for (int i = 0; i < word.length(); i++) {
+            int rr = r + dr * i, cc = c + dc * i;
+            if (session.currentAt(rr, cc) == CrosswordState.UNCOVERED_FIELD) {
+                session.setCurrentAt(rr, cc, session.solutionAt(rr, cc));
+            }
+        }
+    }
+
+    private CrosswordPlayMode parseMode(String raw) {
+        return "WORDS".equalsIgnoreCase(raw) ? CrosswordPlayMode.WORDS : CrosswordPlayMode.LETTERS;
+    }
+
+    /** Grid-case, trimmed, and internal whitespace runs collapsed to one space, for forgiving word matching. */
+    private String normalizeWord(String raw) {
+        if (raw == null) return "";
+        return CrosswordTextUtils.toGridCase(raw.trim().replaceAll("\\s+", " "));
     }
 
     public MultiplayerSessionResponse getSession(UUID sessionId, User user) {
@@ -309,6 +401,11 @@ public class CrosswordMultiplayerService {
     }
 
     public MultiplayerSessionResponse toResponse(CrosswordMultiplayerSession session, UUID requestingUserId) {
+        return toResponse(session, requestingUserId, null, null, null);
+    }
+
+    private MultiplayerSessionResponse toResponse(CrosswordMultiplayerSession session, UUID requestingUserId,
+                                                 Boolean lastGuessCorrect, String lastGuessWord, Integer lastGuessPoints) {
         boolean isPlayer1 = session.getPlayer1().getId().equals(requestingUserId);
         String myHand = isPlayer1 ? session.getPlayer1Hand() : session.getPlayer2Hand();
         boolean myTurn = requestingUserId.equals(session.getCurrentTurnUserId());
@@ -320,8 +417,12 @@ public class CrosswordMultiplayerService {
                 .player1(toPlayerInfo(session.getPlayer1()))
                 .player2(session.getPlayer2() != null ? toPlayerInfo(session.getPlayer2()) : null)
                 .status(session.getStatus().name())
+                .mode(session.effectiveMode().name())
                 .currentTurnUserId(session.getCurrentTurnUserId())
                 .myTurn(myTurn)
+                .lastGuessCorrect(lastGuessCorrect)
+                .lastGuessWord(lastGuessWord)
+                .lastGuessPoints(lastGuessPoints)
                 .currentGrid(session.getCurrentGrid())
                 .width(session.getWidth())
                 .height(session.getHeight())
@@ -346,6 +447,7 @@ public class CrosswordMultiplayerService {
                 .crosswordName(session.getCrossword().getName())
                 .opponent(opponent != null ? toPlayerInfo(opponent) : null)
                 .status(session.getStatus().name())
+                .mode(session.effectiveMode().name())
                 .myTurn(myTurn)
                 .myScore(myScore)
                 .opponentScore(opScore)
@@ -371,6 +473,7 @@ public class CrosswordMultiplayerService {
                         .row(t.getRow())
                         .column(t.getColumn())
                         .direction(t.getDirection() == Direction.ACROSS ? DirectionDto.ACROSS : DirectionDto.DOWN)
+                        .solved(t.isSolved())
                         .build())
                 .toList();
     }

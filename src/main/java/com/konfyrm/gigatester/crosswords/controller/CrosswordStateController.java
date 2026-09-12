@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.crosswords.controller;
 
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateUpdateRequest;
+import com.konfyrm.gigatester.crosswords.domain.dto.request.SubmitWordRequest;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -37,5 +38,10 @@ public interface CrosswordStateController {
     ResponseEntity<?> updateCrosswordState(@PathVariable("id") UUID id,
                                            @RequestBody CrosswordStateUpdateRequest request,
                                            @AuthenticationPrincipal User user);
+
+    @PutMapping("api/v1/crossword-states/{id}/word")
+    ResponseEntity<?> submitWord(@PathVariable("id") UUID id,
+                                @RequestBody SubmitWordRequest request,
+                                @AuthenticationPrincipal User user);
 
 }

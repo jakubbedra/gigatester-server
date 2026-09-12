@@ -115,6 +115,7 @@ public class MetricsService {
         int totalTestsPassed = (int) stats.stream().filter(UserTestStat::isPassed).count();
         int totalQuestionsAnswered = stats.stream().mapToInt(UserTestStat::getTotalQuestions).sum();
         int totalQuestionsCorrect = stats.stream().mapToInt(UserTestStat::getCorrectQuestions).sum();
+        int totalQuestionsIncorrect = totalQuestionsAnswered - totalQuestionsCorrect;
 
         List<DailyStatDto> dailyStats = stats.stream()
                 .collect(Collectors.groupingBy(UserTestStat::getCompletedDate))
@@ -146,6 +147,7 @@ public class MetricsService {
                 .totalTestsPassed(totalTestsPassed)
                 .totalQuestionsAnswered(totalQuestionsAnswered)
                 .totalQuestionsCorrect(totalQuestionsCorrect)
+                .totalQuestionsIncorrect(totalQuestionsIncorrect)
                 .dailyStats(dailyStats)
                 .myTests(myTests)
                 .tagStats(tagStats)

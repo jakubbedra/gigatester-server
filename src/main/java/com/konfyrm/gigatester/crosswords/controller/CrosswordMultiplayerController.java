@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.crosswords.controller;
 
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordLetterRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateRequest;
+import com.konfyrm.gigatester.crosswords.domain.dto.request.SubmitWordRequest;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +34,14 @@ public interface CrosswordMultiplayerController {
     ResponseEntity<?> submitTurn(
             @PathVariable UUID id,
             @RequestBody List<CrosswordLetterRequest> letters,
+            @AuthenticationPrincipal User user
+    );
+
+    @PutMapping("/{id}/word")
+    @PreAuthorize("isAuthenticated()")
+    ResponseEntity<?> submitWord(
+            @PathVariable UUID id,
+            @RequestBody SubmitWordRequest request,
             @AuthenticationPrincipal User user
     );
 

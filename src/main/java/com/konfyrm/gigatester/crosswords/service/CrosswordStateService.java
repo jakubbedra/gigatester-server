@@ -2,7 +2,9 @@ package com.konfyrm.gigatester.crosswords.service;
 
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateUpdateRequest;
+import com.konfyrm.gigatester.crosswords.domain.dto.request.SubmitWordRequest;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
+import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordPlayMode;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordTerm;
 import com.konfyrm.gigatester.crosswords.domain.entity.enums.BotDifficulty;
@@ -135,7 +137,28 @@ public class CrosswordStateService {
         CrosswordState state = crosswordGeneratorService.generate(crossword, filteredTerms, request.getNumberOfWords());
         state.setUser(user);
         state.setBotDifficulty(request.getBotDifficulty() != null ? request.getBotDifficulty() : BotDifficulty.NORMAL);
+        state.setMode("WORDS".equalsIgnoreCase(request.getMultiplayerMode()) ? CrosswordPlayMode.WORDS : CrosswordPlayMode.LETTERS);
         return crosswordStateRepository.save(state);
+    }
+
+    /**
+     * WORDS mode: the player names a whole word for one clue. A correct answer fills that
+     * word into the grid and scores exactly its length; a wrong answer scores nothing (never
+     * negative). The bot then gets its own turn at a random unsolved word, per the same
+     * per-difficulty odds it already uses to place letters in LETTERS mode.
+     */
+    @Transactional
+    public CrosswordTurnService.WordTurnOutcome submitWord(UUID id, SubmitWordRequest request, UUID userId) {
+        CrosswordState state = crosswordStateRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "CrosswordState with id: " + id + " not found."));
+        if (state.getUser() == null || !state.getUser().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        var outcome = crosswordTurnService.processWordTurn(state, request);
+        if (!state.getCurrentGrid().contains(String.valueOf(CrosswordState.UNCOVERED_FIELD))) {
+            streakService.recordActivity(state.getUser());
+        }
+        return outcome;
     }
 
 }

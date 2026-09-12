@@ -59,6 +59,14 @@ public class CrosswordState {
     @Builder.Default
     private BotDifficulty botDifficulty = BotDifficulty.NORMAL;
 
+    /** Null on legacy rows — treat as {@link CrosswordPlayMode#LETTERS} via {@link #effectiveMode()}. */
+    @Enumerated(EnumType.STRING)
+    private CrosswordPlayMode mode;
+
+    public CrosswordPlayMode effectiveMode() {
+        return mode == null ? CrosswordPlayMode.LETTERS : mode;
+    }
+
     public int index(int row, int col) {
         return row * width + col;
     }

@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.crosswords.controller;
 
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordLetterRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateRequest;
+import com.konfyrm.gigatester.crosswords.domain.dto.request.SubmitWordRequest;
 import com.konfyrm.gigatester.crosswords.service.CrosswordMultiplayerService;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.annotation.Nonnull;
@@ -36,6 +37,11 @@ public class CrosswordMultiplayerControllerImpl implements CrosswordMultiplayerC
     @Override
     public ResponseEntity<?> submitTurn(UUID id, List<CrosswordLetterRequest> letters, @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(service.submitTurn(id, letters, user));
+    }
+
+    @Override
+    public ResponseEntity<?> submitWord(UUID id, SubmitWordRequest request, @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(service.submitWord(id, request, user));
     }
 
     @Override

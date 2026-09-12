@@ -26,6 +26,11 @@ public class CrosswordStateResponse {
 
     private TurnResultResponse lastTurn;
 
+    private String mode;
+
+    /** Only set on the response to a WORDS-mode submitWord call. */
+    private WordTurnResultResponse lastWordTurn;
+
     private List<CrosswordPlayerResponse> players;
 
     private List<CrosswordStateClueResponse> clues;

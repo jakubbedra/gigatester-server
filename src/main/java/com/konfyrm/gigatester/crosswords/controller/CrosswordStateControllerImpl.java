@@ -3,10 +3,12 @@ package com.konfyrm.gigatester.crosswords.controller;
 import com.konfyrm.gigatester.crosswords.domain.converter.CrosswordStateConverter;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateRequest;
 import com.konfyrm.gigatester.crosswords.domain.dto.request.CrosswordStateUpdateRequest;
+import com.konfyrm.gigatester.crosswords.domain.dto.request.SubmitWordRequest;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.service.CrosswordGenerationJobStore;
 import com.konfyrm.gigatester.crosswords.service.CrosswordStateService;
 import com.konfyrm.gigatester.crosswords.service.CrosswordTurnService.TurnOutcome;
+import com.konfyrm.gigatester.crosswords.service.CrosswordTurnService.WordTurnOutcome;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.annotation.Nonnull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,6 +80,12 @@ public class CrosswordStateControllerImpl implements CrosswordStateController {
             UUID id, CrosswordStateUpdateRequest request, @AuthenticationPrincipal User user
     ) {
         TurnOutcome outcome = crosswordStateService.updateCrosswordState(id, request, user.getId());
+        return ResponseEntity.ok(crosswordStateConverter.toResponse(outcome.state(), outcome.result()));
+    }
+
+    @Override
+    public ResponseEntity<?> submitWord(UUID id, SubmitWordRequest request, @AuthenticationPrincipal User user) {
+        WordTurnOutcome outcome = crosswordStateService.submitWord(id, request, user.getId());
         return ResponseEntity.ok(crosswordStateConverter.toResponse(outcome.state(), outcome.result()));
     }
 

@@ -14,6 +14,7 @@ public class ProgressResponse {
     private int totalTestsPassed;
     private int totalQuestionsAnswered;
     private int totalQuestionsCorrect;
+    private int totalQuestionsIncorrect;
     private List<DailyStatDto> dailyStats;
     private List<TestSummaryForMetricsDto> myTests;
     private List<TagAccuracyDto> tagStats;

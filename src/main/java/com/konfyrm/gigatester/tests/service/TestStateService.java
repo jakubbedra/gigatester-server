@@ -181,9 +181,11 @@ public class TestStateService {
 
     /**
      * Folds the current LEARNING round's outcome into the test's running total/correct
-     * counters and records each answered question's attempt — must be called exactly
-     * once per round, right before that round's QuestionStates get reset/orphan-removed
-     * for retry (or, for the final round, right before completion is recorded).
+     * counters — must be called exactly once per round, right before that round's
+     * QuestionStates get reset/orphan-removed for retry (or, for the final round, right
+     * before completion is recorded). Per-question UserQuestionStat recording happens
+     * separately, immediately on each submission (see recordLearningQuestionAttempt) —
+     * not here — so an abandoned round's answers still count instead of being lost.
      */
     private void accumulateRound(TestState testState) {
         List<QuestionState> roundQuestions = testState.getQuestions();
@@ -191,13 +193,28 @@ public class TestStateService {
         int roundCorrect = (int) roundQuestions.stream().filter(QuestionState::isWasCorrectAnswer).count();
         testState.setCumulativeAttempted(safeInt(testState.getCumulativeAttempted()) + roundTotal);
         testState.setCumulativeCorrect(safeInt(testState.getCumulativeCorrect()) + roundCorrect);
-        if (testState.getUser() != null) {
-            metricsService.recordQuestionAttempts(testState.getUser(), roundQuestions);
-        }
     }
 
     private int safeInt(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    /**
+     * Records a single LEARNING-mode question's attempt into UserQuestionStat the moment
+     * it's submitted, rather than waiting for its round (or the whole test) to finish —
+     * so per-question accuracy stats (tag accuracy, weighted shuffle) never lose an answer
+     * to an abandoned test. Only the granularity of *when* this is recorded changes here;
+     * the "Moje postępy" summary tiles still come from UserTestStat, written once at
+     * completion as before (via recordTestCompletion, unaffected by this).
+     */
+    @Transactional
+    public void recordLearningQuestionAttempt(UUID testStateId, QuestionState questionState) {
+        if (!questionState.isAnswered()) return;
+        testStateRepository.findById(testStateId).ifPresent(testState -> {
+            if (testState.getMode() == TestMode.LEARNING && testState.getUser() != null) {
+                metricsService.recordQuestionAttempts(testState.getUser(), List.of(questionState));
+            }
+        });
     }
 
     private boolean isUnansweredQuestion(QuestionState questionState, TestExecutionState testExecutionState) {

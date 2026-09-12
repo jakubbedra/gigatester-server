@@ -34,6 +34,10 @@ public class CrosswordMultiplayerSession {
     @Enumerated(EnumType.STRING)
     private CrosswordMultiplayerStatus status;
 
+    /** Null on legacy rows — treat as {@link CrosswordPlayMode#LETTERS} via {@link #effectiveMode()}. */
+    @Enumerated(EnumType.STRING)
+    private CrosswordPlayMode mode;
+
     private UUID currentTurnUserId;
 
     @Column(columnDefinition = "text")
@@ -57,6 +61,10 @@ public class CrosswordMultiplayerSession {
     private List<CrosswordMultiplayerTerm> terms = new ArrayList<>();
 
     private LocalDateTime createdAt;
+
+    public CrosswordPlayMode effectiveMode() {
+        return mode == null ? CrosswordPlayMode.LETTERS : mode;
+    }
 
     // ── grid helpers ─────────────────────────────────────────────────────────
 

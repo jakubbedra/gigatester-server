@@ -29,4 +29,15 @@ public class CrosswordMultiplayerTerm {
 
     private Direction direction;
 
+    /**
+     * WORDS mode only: true once a player has correctly typed this whole word.
+     * Boxed and null-tolerant so rows created before this column existed still read
+     * (null == not solved). Locks the word so it can't be scored twice.
+     */
+    private Boolean solved;
+
+    public boolean isSolved() {
+        return Boolean.TRUE.equals(solved);
+    }
+
 }

@@ -28,4 +28,7 @@ public class CrosswordStateRequest {
     /** AND mode when true (term must have ALL tagFilter tags); OR mode when false (at least one). */
     private boolean matchAllTags;
 
+    /** Multiplayer only: "LETTERS" (default) or "WORDS" (Word Duel). Ignored for single-player. */
+    private String multiplayerMode;
+
 }
