@@ -88,7 +88,8 @@ public class QuestionConversionServiceImpl implements QuestionMappingService {
             if (tag == null && requested.getKey() != null && !requested.getKey().isBlank()) {
                 tag = tagRepository.findByKey(requested.getKey()).orElse(null);
             }
-            if (tag != null && resolved.stream().noneMatch(t -> t.getId().equals(tag.getId()))) {
+            UUID tagId = tag != null ? tag.getId() : null;
+            if (tagId != null && resolved.stream().noneMatch(t -> t.getId().equals(tagId))) {
                 resolved.add(tag);
             }
         }
