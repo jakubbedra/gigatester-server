@@ -3,6 +3,7 @@ package com.konfyrm.gigatester.questions.controller.impl;
 import com.konfyrm.gigatester.questions.controller.QuestionsController;
 import com.konfyrm.gigatester.questions.domain.dto.QuestionDto;
 import com.konfyrm.gigatester.questions.domain.dto.QuestionsListDto;
+import com.konfyrm.gigatester.questions.domain.dto.responses.BulkAddQuestionsResponse;
 import com.konfyrm.gigatester.questions.domain.dto.responses.QuestionsResponse;
 import com.konfyrm.gigatester.questions.domain.entity.Question;
 import com.konfyrm.gigatester.questions.service.QuestionMappingService;
@@ -14,6 +15,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,10 +44,29 @@ public class QuestionsControllerImpl implements QuestionsController {
 
     @Override
     public ResponseEntity<?> addQuestions(QuestionsListDto request) {
-        return request.getQuestions().stream()
-                .map(this::addQuestion)
-                .findAny()
-                .orElseGet(() -> ResponseEntity.internalServerError().build());
+        List<QuestionDto> questions = request.getQuestions() == null ? List.of() : request.getQuestions();
+        List<UUID> createdIds = new ArrayList<>();
+        List<BulkAddQuestionsResponse.Failure> failures = new ArrayList<>();
+
+        // Every question is attempted independently — one bad entry doesn't abort the rest,
+        // and the caller gets back exactly which indices (if any) failed and why.
+        for (int i = 0; i < questions.size(); i++) {
+            try {
+                Question entity = questionMappingService.toEntity(questions.get(i));
+                Question saved = questionService.saveQuestion(entity);
+                createdIds.add(saved.getId());
+            } catch (Exception e) {
+                failures.add(BulkAddQuestionsResponse.Failure.builder()
+                        .index(i)
+                        .message(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName())
+                        .build());
+            }
+        }
+
+        return ResponseEntity.ok(BulkAddQuestionsResponse.builder()
+                .createdIds(createdIds)
+                .failures(failures)
+                .build());
     }
 
     @Override
