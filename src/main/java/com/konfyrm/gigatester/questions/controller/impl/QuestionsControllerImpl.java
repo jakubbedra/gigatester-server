@@ -91,8 +91,9 @@ public class QuestionsControllerImpl implements QuestionsController {
         }
         Question existing = questionOptional.get();
         request.setId(existing.getId());
+        // toEntity now resolves request.getTags() itself, so this no longer needs to carry
+        // the existing tags over by hand (doing so as well would just duplicate them).
         Question updated = questionMappingService.toEntity(request);
-        updated.getTags().addAll(existing.getTags());
         questionService.saveQuestion(updated);
         return ResponseEntity.noContent().build();
     }
