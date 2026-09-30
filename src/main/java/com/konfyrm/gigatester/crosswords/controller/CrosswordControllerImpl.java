@@ -53,7 +53,10 @@ public class CrosswordControllerImpl implements CrosswordController {
 
     @Override
     public ResponseEntity<?> getConfig() {
-        return ResponseEntity.ok(Map.of("maxWordLimit", crosswordProperties.getMaxWordLimit()));
+        return ResponseEntity.ok(Map.of(
+                "maxWordLimit", crosswordProperties.getMaxWordLimit(),
+                "maxWordLimitWords", crosswordProperties.getMaxWordLimitWords()
+        ));
     }
 
     @Override

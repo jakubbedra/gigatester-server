@@ -55,7 +55,8 @@ public class CrosswordMultiplayerService {
 
         List<CrosswordTerm> filteredTerms = CrosswordTagFilter.filter(crossword.getTerms(), request.getTagFilter(), request.getTagFilterMode(), request.isMatchAllTags());
 
-        CrosswordState generated = generatorService.generate(crossword, filteredTerms, request.getNumberOfWords());
+        CrosswordPlayMode mode = parseMode(request.getMultiplayerMode());
+        CrosswordState generated = generatorService.generate(crossword, filteredTerms, request.getNumberOfWords(), mode);
 
         List<CrosswordMultiplayerTerm> terms = generated.getTerms().stream()
                 .map(t -> CrosswordMultiplayerTerm.builder()
@@ -66,7 +67,6 @@ public class CrosswordMultiplayerService {
                         .build())
                 .collect(Collectors.toList());
 
-        CrosswordPlayMode mode = parseMode(request.getMultiplayerMode());
         // WORDS mode has no letter hand — you type whole words instead.
         String player1Hand = mode == CrosswordPlayMode.WORDS
                 ? "" : drawHandFromGrid(generated, 5, new ArrayList<>());

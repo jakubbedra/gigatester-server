@@ -12,4 +12,7 @@ import org.springframework.stereotype.Component;
 public class CrosswordProperties {
 
     private int maxWordLimit = 30;
+
+    /** Separate cap for WORDS ("Word Duel") mode — typing whole words is slower-paced than dragging letters, so a game may want a different ceiling. */
+    private int maxWordLimitWords = 30;
 }

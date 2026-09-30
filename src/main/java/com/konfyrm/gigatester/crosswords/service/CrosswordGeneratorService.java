@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.crosswords.service;
 
 import com.konfyrm.gigatester.crosswords.config.CrosswordProperties;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
+import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordPlayMode;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordPlayer;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordState;
 import com.konfyrm.gigatester.crosswords.domain.entity.CrosswordStateTerm;
@@ -31,16 +32,23 @@ public class CrosswordGeneratorService {
     record Placement(CrosswordTerm term, int row, int col, Direction direction, int intersections) {}
 
     public CrosswordState generate(Crossword crossword, int numberOfWords) {
-        return generate(crossword, crossword.getTerms(), numberOfWords);
+        return generate(crossword, crossword.getTerms(), numberOfWords, CrosswordPlayMode.LETTERS);
     }
 
     public CrosswordState generate(Crossword crossword, List<CrosswordTerm> terms, int numberOfWords) {
+        return generate(crossword, terms, numberOfWords, CrosswordPlayMode.LETTERS);
+    }
+
+    public CrosswordState generate(Crossword crossword, List<CrosswordTerm> terms, int numberOfWords, CrosswordPlayMode mode) {
         if (terms == null || terms.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Crossword has no terms matching the selected tags");
         }
-        if (numberOfWords > crosswordProperties.getMaxWordLimit()) {
+        int maxWordLimit = mode == CrosswordPlayMode.WORDS
+                ? crosswordProperties.getMaxWordLimitWords()
+                : crosswordProperties.getMaxWordLimit();
+        if (numberOfWords > maxWordLimit) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "numberOfWords exceeds the configured maximum of " + crosswordProperties.getMaxWordLimit());
+                    "numberOfWords exceeds the configured maximum of " + maxWordLimit);
         }
 
         List<CrosswordTerm> pool = new ArrayList<>(terms);

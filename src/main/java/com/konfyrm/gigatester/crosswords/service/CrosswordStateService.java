@@ -134,10 +134,11 @@ public class CrosswordStateService {
                 : crossword.getTerms();
         filteredTerms = CrosswordTagFilter.filter(filteredTerms, request.getTagFilter(), request.getTagFilterMode(), request.isMatchAllTags());
 
-        CrosswordState state = crosswordGeneratorService.generate(crossword, filteredTerms, request.getNumberOfWords());
+        CrosswordPlayMode mode = "WORDS".equalsIgnoreCase(request.getMultiplayerMode()) ? CrosswordPlayMode.WORDS : CrosswordPlayMode.LETTERS;
+        CrosswordState state = crosswordGeneratorService.generate(crossword, filteredTerms, request.getNumberOfWords(), mode);
         state.setUser(user);
         state.setBotDifficulty(request.getBotDifficulty() != null ? request.getBotDifficulty() : BotDifficulty.NORMAL);
-        state.setMode("WORDS".equalsIgnoreCase(request.getMultiplayerMode()) ? CrosswordPlayMode.WORDS : CrosswordPlayMode.LETTERS);
+        state.setMode(mode);
         return crosswordStateRepository.save(state);
     }
 

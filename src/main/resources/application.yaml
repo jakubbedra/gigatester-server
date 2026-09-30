@@ -34,6 +34,7 @@ giga-tester:
 
 crossword:
   max-word-limit: ${CROSSWORD_MAX_WORD_LIMIT:30}
+  max-word-limit-words: ${CROSSWORD_MAX_WORD_LIMIT_WORDS:30}
 
 openai:
   api-key: ${OPENAI_API_KEY}
