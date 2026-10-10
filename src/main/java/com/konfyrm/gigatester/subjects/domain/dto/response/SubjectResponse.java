@@ -26,6 +26,8 @@ public class SubjectResponse {
 
     private List<UUID> crosswords;
 
+    private List<UUID> graphs;
+
     private List<CommentResponse> comments;
 
     private List<UserResponse> authors;

@@ -2,6 +2,8 @@ package com.konfyrm.gigatester.security.service;
 
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
+import com.konfyrm.gigatester.graphs.domain.entity.Graph;
+import com.konfyrm.gigatester.graphs.repository.GraphRepository;
 import com.konfyrm.gigatester.security.domain.Permission;
 import com.konfyrm.gigatester.subjects.domain.entity.Subject;
 import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroup;
@@ -33,11 +35,14 @@ public class PermissionService {
     private final SubjectGroupRepository subjectGroupRepository;
     private final TestRepository testRepository;
     private final CrosswordRepository crosswordRepository;
+    private final GraphRepository graphRepository;
 
     public PermissionService(SubjectRepository subjectRepository,
                               SubjectGroupRepository subjectGroupRepository,
                               TestRepository testRepository,
-                              CrosswordRepository crosswordRepository) {
+                              CrosswordRepository crosswordRepository,
+                              GraphRepository graphRepository) {
+        this.graphRepository = graphRepository;
         this.subjectRepository = subjectRepository;
         this.subjectGroupRepository = subjectGroupRepository;
         this.testRepository = testRepository;
@@ -99,6 +104,16 @@ public class PermissionService {
                 && subjects.stream().anyMatch(s -> hasSubjectPermission(user, s.getId(), permission));
     }
 
+    public boolean hasGraphPermission(User user, UUID graphId, Permission permission) {
+        if (isAdmin(user)) return true;
+        List<Subject> subjects = subjectRepository.findByGraphs_Id(graphId);
+        if (subjects.isEmpty()) {
+            return grantedByRole(user, permission) && createdByUser(graphRepository.findById(graphId).orElse(null), user);
+        }
+        return grantedByRole(user, permission)
+                && subjects.stream().anyMatch(s -> hasSubjectPermission(user, s.getId(), permission));
+    }
+
     /** Can the user create a new resource of this type at all (before it's attached to a subject)? */
     public boolean canCreate(User user, Permission writePermission) {
         return grantedByRole(user, writePermission);
@@ -138,6 +153,10 @@ public class PermissionService {
 
     private boolean createdByUser(Test test, User user) {
         return test != null && test.getCreatedBy() != null && user != null && test.getCreatedBy().getId().equals(user.getId());
+    }
+
+    private boolean createdByUser(Graph graph, User user) {
+        return graph != null && graph.getCreatedBy() != null && user != null && graph.getCreatedBy().getId().equals(user.getId());
     }
 
     private boolean createdByUser(Crossword crossword, User user) {

@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.subjects.domain.entity;
 
 import com.konfyrm.gigatester.comments.domain.entity.Comment;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
+import com.konfyrm.gigatester.graphs.domain.entity.Graph;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import jakarta.persistence.*;
@@ -39,6 +40,13 @@ public class Subject {
 
     @ManyToMany
     private List<Crossword> crosswords;
+
+    @ManyToMany
+    @JoinTable(name = "subjects_graphs",
+        joinColumns = @JoinColumn(name = "subject_id"),
+        inverseJoinColumns = @JoinColumn(name = "graph_id"))
+    @Builder.Default
+    private List<Graph> graphs = new java.util.ArrayList<>();
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments;

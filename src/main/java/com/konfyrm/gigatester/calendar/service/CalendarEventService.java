@@ -12,6 +12,7 @@ import com.konfyrm.gigatester.calendar.repository.CalendarEventRepository;
 import com.konfyrm.gigatester.calendar.repository.CalendarGroupMemberRepository;
 import com.konfyrm.gigatester.calendar.repository.CalendarGroupRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
+import com.konfyrm.gigatester.graphs.repository.GraphRepository;
 import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.tests.repository.TestRepository;
 import com.konfyrm.gigatester.users.domain.entity.User;
@@ -35,6 +36,7 @@ public class CalendarEventService {
     private final CalendarGroupMemberRepository memberRepository;
     private final TestRepository testRepository;
     private final CrosswordRepository crosswordRepository;
+    private final GraphRepository graphRepository;
     private final PermissionService permissionService;
     private final CalendarGroupService calendarGroupService;
 
@@ -44,9 +46,11 @@ public class CalendarEventService {
             CalendarGroupMemberRepository memberRepository,
             TestRepository testRepository,
             CrosswordRepository crosswordRepository,
+            GraphRepository graphRepository,
             PermissionService permissionService,
             CalendarGroupService calendarGroupService
     ) {
+        this.graphRepository = graphRepository;
         this.eventRepository = eventRepository;
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
@@ -138,6 +142,7 @@ public class CalendarEventService {
         boolean exists = switch (linkType) {
             case TEST -> testRepository.existsById(linkId);
             case CROSSWORD -> crosswordRepository.existsById(linkId);
+            case GRAPH -> graphRepository.existsById(linkId);
         };
         if (!exists) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Linked " + linkType + " not found: " + linkId);
@@ -194,6 +199,7 @@ public class CalendarEventService {
         return switch (linkType) {
             case TEST -> testRepository.findById(linkId).map(com.konfyrm.gigatester.tests.domain.entity.Test::getName).orElse(null);
             case CROSSWORD -> crosswordRepository.findById(linkId).map(com.konfyrm.gigatester.crosswords.domain.entity.Crossword::getName).orElse(null);
+            case GRAPH -> graphRepository.findById(linkId).map(com.konfyrm.gigatester.graphs.domain.entity.Graph::getName).orElse(null);
         };
     }
 

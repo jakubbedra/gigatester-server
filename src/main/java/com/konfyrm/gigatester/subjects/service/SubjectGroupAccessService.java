@@ -140,4 +140,15 @@ public class SubjectGroupAccessService {
         }
         return false;
     }
+
+    public boolean hasAccessToGraph(UUID graphId, User user) {
+        if (permissionService.isStaff(user)) return true;
+        List<Subject> subjects = subjectRepository.findByGraphs_Id(graphId);
+        for (Subject subject : subjects) {
+            for (SubjectGroup group : groupRepository.findByTests_Id(subject.getId())) {
+                if (hasAccess(group.getId(), user)) return true;
+            }
+        }
+        return false;
+    }
 }

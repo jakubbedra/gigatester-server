@@ -3,6 +3,8 @@ package com.konfyrm.gigatester.subjects.domain.converter;
 import com.konfyrm.gigatester.comments.service.CommentService;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
+import com.konfyrm.gigatester.graphs.domain.entity.Graph;
+import com.konfyrm.gigatester.graphs.repository.GraphRepository;
 import com.konfyrm.gigatester.subjects.domain.dto.request.SubjectRequest;
 import com.konfyrm.gigatester.subjects.domain.dto.response.SubjectResponse;
 import com.konfyrm.gigatester.subjects.domain.dto.response.SubjectsResponse;
@@ -22,12 +24,15 @@ public class SubjectConverter {
 
     private final TestRepository testRepository;
     private final CrosswordRepository crosswordRepository;
+    private final GraphRepository graphRepository;
     private final CommentService commentService;
 
     @Autowired
-    public SubjectConverter(TestRepository testRepository, CrosswordRepository crosswordRepository, CommentService commentService) {
+    public SubjectConverter(TestRepository testRepository, CrosswordRepository crosswordRepository,
+                            GraphRepository graphRepository, CommentService commentService) {
         this.testRepository = testRepository;
         this.crosswordRepository = crosswordRepository;
+        this.graphRepository = graphRepository;
         this.commentService = commentService;
     }
 
@@ -35,6 +40,11 @@ public class SubjectConverter {
         List<Crossword> crosswords = request.getCrosswords() == null ? List.of() :
                 request.getCrosswords().stream()
                         .map(id -> crosswordRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Crossword not found for id: " + id)))
+                        .toList();
+
+        List<Graph> graphs = request.getGraphs() == null ? List.of() :
+                request.getGraphs().stream()
+                        .map(id -> graphRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Graph not found for id: " + id)))
                         .toList();
 
         return Subject.builder()
@@ -45,6 +55,7 @@ public class SubjectConverter {
                         .map(id -> testRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Test not found for id: " + id)))
                         .toList())
                 .crosswords(crosswords)
+                .graphs(graphs)
                 .build();
     }
 
@@ -59,6 +70,8 @@ public class SubjectConverter {
                 .difficulty(subject.getDifficulty())
                 .tests(subject.getTests().stream().map(Test::getId).toList())
                 .crosswords(crosswordIds)
+                .graphs(subject.getGraphs() == null ? List.of() :
+                        subject.getGraphs().stream().map(Graph::getId).toList())
                 .comments(subject.getComments() == null ? List.of() :
                         subject.getComments().stream().map(c -> commentService.toResponse(c, currentUserId)).toList())
                 .authors(subject.getAuthors() == null ? List.of() :

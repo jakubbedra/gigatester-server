@@ -44,6 +44,7 @@ public class SubjectService {
         existing.setDifficulty(subject.getDifficulty());
         existing.setTests(subject.getTests());
         existing.setCrosswords(subject.getCrosswords());
+        existing.setGraphs(subject.getGraphs());
     }
 
     @Transactional

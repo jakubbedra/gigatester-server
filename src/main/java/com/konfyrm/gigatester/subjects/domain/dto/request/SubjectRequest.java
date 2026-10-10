@@ -22,4 +22,6 @@ public class SubjectRequest {
 
     private List<UUID> crosswords;
 
+    private List<UUID> graphs;
+
 }

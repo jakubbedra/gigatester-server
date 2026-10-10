@@ -15,6 +15,8 @@ public interface SubjectRepository extends JpaRepository<Subject, UUID> {
 
     List<Subject> findByCrosswords_Id(UUID crosswordId);
 
+    List<Subject> findByGraphs_Id(UUID graphId);
+
     @Modifying
     @Query(value = "DELETE FROM subject_authors WHERE user_id = :userId", nativeQuery = true)
     void removeUserFromAllAuthors(@Param("userId") UUID userId);

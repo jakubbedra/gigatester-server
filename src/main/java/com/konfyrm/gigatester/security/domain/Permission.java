@@ -10,7 +10,9 @@ public enum Permission {
     TESTS_READ,
     TESTS_WRITE,
     CROSSWORDS_READ,
-    CROSSWORDS_WRITE;
+    CROSSWORDS_WRITE,
+    GRAPHS_READ,
+    GRAPHS_WRITE;
 
     /**
      * WRITE implies READ for the same resource. SUBJECTS_WRITE additionally
@@ -25,6 +27,7 @@ public enum Permission {
             case SUBJECTS_READ -> granted == SUBJECTS_WRITE;
             case TESTS_READ -> granted == TESTS_WRITE;
             case CROSSWORDS_READ -> granted == CROSSWORDS_WRITE;
+            case GRAPHS_READ -> granted == GRAPHS_WRITE;
             default -> false;
         };
     }
