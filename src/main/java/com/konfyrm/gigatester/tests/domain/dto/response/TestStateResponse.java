@@ -52,6 +52,16 @@ public class TestStateResponse {
 
     private boolean hideTagsDuringTest;
 
+    private boolean scheduled;
+
+    /** Scheduled exams: scores and review unlock once the window closes. While false, score fields are zeroed. */
+    private boolean reviewAvailable;
+
+    /** Scheduled exams: manual open questions staff has not graded yet. */
+    private int pendingGrading;
+
+    private Long submittedAt;
+
     @Getter
     @Setter
     @Builder

@@ -14,4 +14,6 @@ public interface TestStateRepository extends JpaRepository<TestState, UUID> {
 
     void deleteByUser_Id(UUID userId);
 
+    java.util.List<TestState> findByTest_Id(UUID testId);
+
 }

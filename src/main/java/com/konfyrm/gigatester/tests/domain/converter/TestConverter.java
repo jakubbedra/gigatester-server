@@ -8,6 +8,7 @@ import com.konfyrm.gigatester.tests.domain.dto.request.TestRequest;
 import com.konfyrm.gigatester.tests.domain.dto.response.TestResponse;
 import com.konfyrm.gigatester.tests.domain.dto.response.TestsResponse;
 import com.konfyrm.gigatester.tests.domain.entity.Test;
+import com.konfyrm.gigatester.tests.domain.entity.TestType;
 import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,9 @@ public class TestConverter {
                 .passingPercentage(request.getPassingPercentage())
                 .timeLimit(request.getTimeLimit())
                 .hideTagsDuringTest(request.isHideTagsDuringTest())
+                .type(request.getType() == null ? TestType.STANDARD : request.getType())
+                .startAt(request.getStartAt())
+                .windowEnd(request.getWindowEnd())
                 .build();
     }
 
@@ -51,6 +55,9 @@ public class TestConverter {
                 .passingPercentage(test.getPassingPercentage())
                 .timeLimit(test.getTimeLimit())
                 .hideTagsDuringTest(Boolean.TRUE.equals(test.getHideTagsDuringTest()))
+                .type(test.effectiveType())
+                .startAt(test.getStartAt())
+                .windowEnd(test.getWindowEnd())
                 .authors(test.getAuthors() == null ? List.of() : test.getAuthors().stream()
                         .map(u -> UserResponse.builder().id(u.getId()).username(u.getUsername())
                                 .role(u.getRole()).profilePictureUrl(u.getProfilePictureUrl()).build())

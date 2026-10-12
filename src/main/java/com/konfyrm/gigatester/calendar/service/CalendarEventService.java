@@ -13,7 +13,14 @@ import com.konfyrm.gigatester.calendar.repository.CalendarGroupMemberRepository;
 import com.konfyrm.gigatester.calendar.repository.CalendarGroupRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
 import com.konfyrm.gigatester.graphs.repository.GraphRepository;
+import com.konfyrm.gigatester.security.domain.Permission;
 import com.konfyrm.gigatester.security.service.PermissionService;
+import com.konfyrm.gigatester.subjects.domain.entity.SubjectGroup;
+import com.konfyrm.gigatester.subjects.repository.SubjectGroupRepository;
+import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
+import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
+import com.konfyrm.gigatester.tests.domain.entity.Test;
+import com.konfyrm.gigatester.tests.domain.entity.TestType;
 import com.konfyrm.gigatester.tests.repository.TestRepository;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.HttpStatus;
@@ -22,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +47,9 @@ public class CalendarEventService {
     private final GraphRepository graphRepository;
     private final PermissionService permissionService;
     private final CalendarGroupService calendarGroupService;
+    private final SubjectGroupAccessService accessService;
+    private final SubjectRepository subjectRepository;
+    private final SubjectGroupRepository subjectGroupRepository;
 
     public CalendarEventService(
             CalendarEventRepository eventRepository,
@@ -48,8 +59,14 @@ public class CalendarEventService {
             CrosswordRepository crosswordRepository,
             GraphRepository graphRepository,
             PermissionService permissionService,
-            CalendarGroupService calendarGroupService
+            CalendarGroupService calendarGroupService,
+            SubjectGroupAccessService accessService,
+            SubjectRepository subjectRepository,
+            SubjectGroupRepository subjectGroupRepository
     ) {
+        this.accessService = accessService;
+        this.subjectRepository = subjectRepository;
+        this.subjectGroupRepository = subjectGroupRepository;
         this.graphRepository = graphRepository;
         this.eventRepository = eventRepository;
         this.groupRepository = groupRepository;
@@ -62,6 +79,59 @@ public class CalendarEventService {
 
     /** Events from every group this user can see (owned, member of, or all if admin), optionally narrowed to specific groups and a date window. */
     public List<CalendarEventResponse> getEvents(User user, List<UUID> groupIds, LocalDateTime from, LocalDateTime to) {
+        List<CalendarEventResponse> result = new ArrayList<>(storedEvents(user, groupIds, from, to));
+        result.addAll(examEvents(user, from, to));
+        return result;
+    }
+
+    /**
+     * Scheduled exams show up on their own for everyone who can reach them: students through the
+     * subject groups they have approved access to, staff for the exams they can manage. They are
+     * generated here rather than stored, so they follow the exam's schedule with no extra upkeep.
+     */
+    private List<CalendarEventResponse> examEvents(User user, LocalDateTime from, LocalDateTime to) {
+        boolean staff = permissionService.isStaff(user);
+        return testRepository.findByType(TestType.SCHEDULED_EXAM).stream()
+                .filter(t -> t.getStartAt() != null && t.getWindowEnd() != null)
+                .filter(t -> staff
+                        ? permissionService.hasTestPermission(user, t.getId(), Permission.TESTS_WRITE)
+                        : accessService.hasAccessToTest(t.getId(), user))
+                .filter(t -> {
+                    LocalDateTime start = LocalDateTime.ofInstant(t.getStartAt(), ZoneOffset.UTC);
+                    return from == null || to == null || (!start.isBefore(from) && !start.isAfter(to));
+                })
+                .map(t -> toExamEvent(t, user, staff))
+                .collect(Collectors.toList());
+    }
+
+    private CalendarEventResponse toExamEvent(Test test, User user, boolean staff) {
+        String groupNames = subjectRepository.findByTests_Id(test.getId()).stream()
+                .flatMap(s -> subjectGroupRepository.findByTests_Id(s.getId()).stream())
+                .filter(g -> staff || accessService.hasAccess(g.getId(), user))
+                .map(SubjectGroup::getName)
+                .distinct()
+                .sorted()
+                .collect(Collectors.joining(", "));
+        return CalendarEventResponse.builder()
+                .id(test.getId())
+                .calendarGroupName(groupNames)
+                .title(test.getName())
+                .description(null)
+                .startTime(LocalDateTime.ofInstant(test.getStartAt(), ZoneOffset.UTC))
+                .endTime(LocalDateTime.ofInstant(test.getWindowEnd(), ZoneOffset.UTC))
+                .links(List.of(CalendarEventLinkResponse.builder()
+                        .linkType(CalendarLinkType.TEST)
+                        .linkId(test.getId())
+                        .linkName(test.getName())
+                        .build()))
+                .canManage(false)
+                .exam(true)
+                .startInstant(test.getStartAt())
+                .endInstant(test.getWindowEnd())
+                .build();
+    }
+
+    private List<CalendarEventResponse> storedEvents(User user, List<UUID> groupIds, LocalDateTime from, LocalDateTime to) {
         Set<UUID> visibleGroupIds = visibleGroupIds(user);
         if (groupIds != null && !groupIds.isEmpty()) {
             visibleGroupIds.retainAll(groupIds);

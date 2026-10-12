@@ -6,6 +6,7 @@ import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -40,12 +41,32 @@ public class Test {
     @Builder.Default
     private Boolean hideTagsDuringTest = false;
 
+    /** Null on tests created before types existed — treat as STANDARD via effectiveType(). */
+    @Enumerated(EnumType.STRING)
+    private TestType type;
+
+    /** SCHEDULED_EXAM only: when taking the exam opens. */
+    @Nullable
+    private Instant startAt;
+
+    /** SCHEDULED_EXAM only: last moment an attempt may be started; also the hard cutoff for answers. */
+    @Nullable
+    private Instant windowEnd;
+
     @ManyToMany
     @JoinTable(name = "test_authors",
         joinColumns = @JoinColumn(name = "test_id"),
         inverseJoinColumns = @JoinColumn(name = "user_id"))
     @Builder.Default
     private List<User> authors = new ArrayList<>();
+
+    public TestType effectiveType() {
+        return type == null ? TestType.STANDARD : type;
+    }
+
+    public boolean isScheduledExam() {
+        return effectiveType() == TestType.SCHEDULED_EXAM;
+    }
 
     /**
      * Set once at creation. Used to authorize writes on tests not yet attached

@@ -31,6 +31,7 @@ public class TestService {
     }
 
     public Test addTest(Test test) {
+        validateSchedule(test);
         return testRepository.save(test);
     }
 
@@ -47,6 +48,7 @@ public class TestService {
         if (testOptional.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Test with id: " + test.getId() + " not found.");
         }
+        validateSchedule(test);
         Test currentTest = testOptional.get();
         testRepository.save(currentTest.toBuilder()
                 .name(test.getName())
@@ -56,7 +58,20 @@ public class TestService {
                 .passingPercentage(test.getPassingPercentage())
                 .timeLimit(test.getTimeLimit())
                 .hideTagsDuringTest(test.getHideTagsDuringTest())
+                .type(test.getType())
+                .startAt(test.getStartAt())
+                .windowEnd(test.getWindowEnd())
                 .build());
+    }
+
+    private void validateSchedule(Test test) {
+        if (!test.isScheduledExam()) return;
+        if (test.getStartAt() == null || test.getWindowEnd() == null || !test.getWindowEnd().isAfter(test.getStartAt())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A scheduled exam needs a start and a later window end.");
+        }
+        if (test.getTimeLimit() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A scheduled exam needs a time limit.");
+        }
     }
 
     public void addQuestionsToTest(UUID testId, List<Question> questions) {

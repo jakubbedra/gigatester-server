@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.users.controller;
 
+import com.konfyrm.gigatester.users.domain.dto.request.AdminCreateUserRequest;
 import com.konfyrm.gigatester.users.domain.dto.request.ChangePasswordRequest;
 import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import com.konfyrm.gigatester.users.domain.entity.User;
@@ -35,6 +36,9 @@ public interface UserController {
 
     @GetMapping
     ResponseEntity<List<UserResponse>> findAll();
+
+    @PostMapping
+    ResponseEntity<UserResponse> createUser(@RequestBody AdminCreateUserRequest request);
 
     @GetMapping("/{id}")
     ResponseEntity<UserResponse> findById(@PathVariable UUID id);

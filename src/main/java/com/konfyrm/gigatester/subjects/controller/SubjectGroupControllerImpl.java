@@ -127,6 +127,12 @@ public class SubjectGroupControllerImpl implements SubjectGroupController {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> addMember(UUID id, UUID userId) {
+        return ResponseEntity.ok(accessService.addMember(id, userId));
+    }
+
+    @Override
     @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<?> getAllAccessRequests(User user) {
         return ResponseEntity.ok(accessService.getAllAccessRequests());

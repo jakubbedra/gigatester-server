@@ -8,6 +8,7 @@ import com.konfyrm.gigatester.tests.domain.dto.response.TestStateResponse;
 import com.konfyrm.gigatester.tests.domain.entity.QuestionState;
 import com.konfyrm.gigatester.tests.domain.entity.TestMode;
 import com.konfyrm.gigatester.tests.domain.entity.TestState;
+import com.konfyrm.gigatester.tests.service.ExamSupport;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -34,8 +35,14 @@ public class TestStateConverter {
         if (testState.getPassingPercentage() != null) {
             builder.passingPercentage(testState.getPassingPercentage());
         }
-        return builder.totalScore(testState.getQuestions().stream().mapToDouble(q -> q.getScore() != null ? q.getScore() : 0.0).sum())
-                .maxScore(testState.getQuestions().stream().mapToDouble(this::getMaxScore).sum())
+        boolean scheduled = testState.getTest().isScheduledExam();
+        boolean hideScores = scheduled && !ExamSupport.reviewAvailable(testState.getTest());
+        return builder.totalScore(hideScores ? 0.0 : testState.getQuestions().stream().mapToDouble(q -> q.getScore() != null ? q.getScore() : 0.0).sum())
+                .maxScore(hideScores ? 0.0 : testState.getQuestions().stream().mapToDouble(this::getMaxScore).sum())
+                .scheduled(scheduled)
+                .reviewAvailable(scheduled && !hideScores)
+                .pendingGrading(scheduled ? ExamSupport.pendingManualCount(testState) : 0)
+                .submittedAt(testState.getSubmittedAt())
                 .timeLimitEnabled(testState.isTimeLimitEnabled())
                 .timeLimitMs(testState.getTimeLimitMs())
                 .startTime(testState.getStartTime())

@@ -36,4 +36,7 @@ public abstract class QuestionState {
     @Builder.Default
     private boolean wasCorrectAnswer = false;
 
+    /** Set when staff graded or overrode this question's score (scheduled exams). Null = never touched by staff. */
+    private Boolean gradedByStaff;
+
 }

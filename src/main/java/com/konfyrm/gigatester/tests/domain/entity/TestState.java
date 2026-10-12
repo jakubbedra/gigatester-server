@@ -69,6 +69,9 @@ public class TestState {
     @Column(columnDefinition = "bigint default 0")
     private long startTime;
 
+    /** Epoch ms when the attempt was submitted or timed out (scheduled exams); null while in progress. */
+    private Long submittedAt;
+
     /**
      * LEARNING mode retries wrong questions in rounds, discarding each round's
      * QuestionStates (orphanRemoval on `questions`) once it's superseded — so by

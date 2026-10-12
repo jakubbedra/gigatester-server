@@ -1,6 +1,9 @@
 package com.konfyrm.gigatester.tests.domain.dto.request;
 
+import com.konfyrm.gigatester.tests.domain.entity.TestType;
 import lombok.*;
+
+import java.time.Instant;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,5 +28,12 @@ public class TestRequest {
     private long timeLimit;
 
     private boolean hideTagsDuringTest;
+
+    /** Optional; defaults to STANDARD. */
+    private TestType type;
+
+    private Instant startAt;
+
+    private Instant windowEnd;
 
 }

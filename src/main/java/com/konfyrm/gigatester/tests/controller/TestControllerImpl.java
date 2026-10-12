@@ -84,7 +84,13 @@ public class TestControllerImpl implements TestController {
         if (!accessService.hasAccessToTest(testId, user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
-        return ResponseEntity.ok(testConverter.toResponse(testService.findTest(testId)));
+        Test test = testService.findTest(testId);
+        var response = testConverter.toResponse(test);
+        if (test.isScheduledExam() && !permissionService.hasTestPermission(user, testId, Permission.TESTS_WRITE)) {
+            // Students must not be able to enumerate an exam's questions before or during it.
+            response.setQuestions(List.of());
+        }
+        return ResponseEntity.ok(response);
     }
 
     @Override
@@ -194,6 +200,10 @@ public class TestControllerImpl implements TestController {
     @Override
     public ResponseEntity<?> getTestQuestions(UUID testId, int page, int size, String q, User user) {
         if (!accessService.hasAccessToTest(testId, user)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        if (testService.findTest(testId).isScheduledExam()
+                && !permissionService.hasTestPermission(user, testId, Permission.TESTS_WRITE)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
         int clampedSize = Math.min(Math.max(size, 1), 100);

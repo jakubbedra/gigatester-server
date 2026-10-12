@@ -35,6 +35,14 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private UserRole role;
 
+    /** Null on accounts from before this existed; read it through {@link #effectiveType()}. */
+    @Enumerated(EnumType.STRING)
+    private UserType type;
+
+    public UserType effectiveType() {
+        return type == null ? UserType.SELF_REGISTERED : type;
+    }
+
     @Column
     private String profilePictureUrl;
 

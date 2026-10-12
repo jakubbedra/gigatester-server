@@ -2,6 +2,7 @@ package com.konfyrm.gigatester.users.controller;
 
 import com.konfyrm.gigatester.questions.service.ImageService;
 import com.konfyrm.gigatester.questions.service.impl.R2ImageService;
+import com.konfyrm.gigatester.users.domain.dto.request.AdminCreateUserRequest;
 import com.konfyrm.gigatester.users.domain.dto.request.ChangePasswordRequest;
 import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import com.konfyrm.gigatester.users.domain.entity.User;
@@ -65,6 +66,12 @@ public class UserControllerImpl implements UserController {
     @Override
     public ResponseEntity<List<UserResponse>> findAll() {
         return ResponseEntity.ok(userService.findAll());
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> createUser(AdminCreateUserRequest request) {
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(userService.createUserAsAdmin(request));
     }
 
     @Override

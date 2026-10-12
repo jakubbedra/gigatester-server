@@ -12,19 +12,23 @@ import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.repository.SubjectGroupAccessRepository;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
 import com.konfyrm.gigatester.tests.repository.TestStateRepository;
+import com.konfyrm.gigatester.users.domain.dto.request.AdminCreateUserRequest;
 import com.konfyrm.gigatester.users.domain.dto.request.RegisterRequest;
 import com.konfyrm.gigatester.users.domain.dto.response.AuthResponse;
 import com.konfyrm.gigatester.users.domain.dto.response.UserResponse;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import com.konfyrm.gigatester.users.domain.entity.UserRole;
+import com.konfyrm.gigatester.users.domain.entity.UserType;
 import com.konfyrm.gigatester.users.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -62,12 +66,35 @@ public class UserService implements UserDetailsService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(UserRole.USER)
+                .type(UserType.SELF_REGISTERED)
                 .build();
         userRepository.save(user);
         return AuthResponse.builder()
                 .token(jwtService.generateToken(user))
                 .user(toResponse(user))
                 .build();
+    }
+
+    /** Admin-created account: a regular USER with the username and password the admin typed in. */
+    public UserResponse createUserAsAdmin(AdminCreateUserRequest request) {
+        String username = request.getUsername() == null ? "" : request.getUsername().trim();
+        String password = request.getPassword() == null ? "" : request.getPassword();
+        if (username.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username must not be empty.");
+        }
+        if (password.length() < 6) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be at least 6 characters long.");
+        }
+        if (userRepository.existsByUsername(username)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already taken.");
+        }
+        User user = userRepository.save(User.builder()
+                .username(username)
+                .password(passwordEncoder.encode(password))
+                .role(UserRole.USER)
+                .type(UserType.ADMIN_CREATED)
+                .build());
+        return toResponse(user);
     }
 
     public AuthResponse login(String username, String rawPassword) {
@@ -194,6 +221,7 @@ public class UserService implements UserDetailsService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .role(user.getRole())
+                .type(user.effectiveType())
                 .assignedRoleId(user.getAssignedRole() != null ? user.getAssignedRole().getId() : null)
                 .assignedRoleName(user.getAssignedRole() != null ? user.getAssignedRole().getName() : null)
                 .permissions(permissionService.effectivePermissions(user))

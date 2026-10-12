@@ -11,6 +11,7 @@ import com.konfyrm.gigatester.subjects.repository.SubjectGroupRepository;
 import com.konfyrm.gigatester.subjects.repository.SubjectRepository;
 import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.users.domain.entity.User;
+import com.konfyrm.gigatester.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,11 +26,14 @@ public class SubjectGroupAccessService {
     private final SubjectGroupRepository groupRepository;
     private final SubjectRepository subjectRepository;
     private final PermissionService permissionService;
+    private final UserRepository userRepository;
 
     public SubjectGroupAccessService(SubjectGroupAccessRepository accessRepository,
                                      SubjectGroupRepository groupRepository,
                                      SubjectRepository subjectRepository,
-                                     PermissionService permissionService) {
+                                     PermissionService permissionService,
+                                     UserRepository userRepository) {
+        this.userRepository = userRepository;
         this.accessRepository = accessRepository;
         this.groupRepository = groupRepository;
         this.subjectRepository = subjectRepository;
@@ -85,6 +89,23 @@ public class SubjectGroupAccessService {
                         r.getId(), r.getUser().getId(), r.getUser().getUsername(),
                         r.getSubjectGroup().getId(), r.getSubjectGroup().getName(), r.getStatus()))
                 .toList();
+    }
+
+    /**
+     * Admin shortcut: puts a user straight into a group with approved access, whatever state any
+     * earlier request was in (pending, denied or none at all).
+     */
+    public AccessRequestResponse addMember(UUID groupId, UUID userId) {
+        SubjectGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        SubjectGroupAccessRequest request = accessRepository.findByUser_IdAndSubjectGroup_Id(userId, groupId)
+                .orElseGet(() -> SubjectGroupAccessRequest.builder().user(user).subjectGroup(group).build());
+        request.setStatus(SubjectGroupAccessStatus.APPROVED);
+        request = accessRepository.save(request);
+        return new AccessRequestResponse(request.getId(), user.getId(), user.getUsername(),
+                group.getId(), group.getName(), request.getStatus());
     }
 
     public void revokeAccess(UUID requestId) {

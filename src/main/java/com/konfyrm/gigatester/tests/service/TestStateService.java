@@ -5,9 +5,14 @@ import com.konfyrm.gigatester.questions.domain.entity.OpenQuestion;
 import com.konfyrm.gigatester.metrics.service.DailyStreakService;
 import com.konfyrm.gigatester.metrics.service.MetricsService;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
+import com.konfyrm.gigatester.security.domain.Permission;
+import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.tests.domain.dto.enums.NavigateActionDto;
+import com.konfyrm.gigatester.tests.domain.dto.enums.TestDisplayTypeDto;
+import com.konfyrm.gigatester.tests.domain.dto.enums.TestModeDto;
 import com.konfyrm.gigatester.tests.domain.dto.request.TestStateRequest;
 import com.konfyrm.gigatester.tests.domain.entity.*;
+import com.konfyrm.gigatester.tests.repository.TestRepository;
 import com.konfyrm.gigatester.tests.repository.TestStateRepository;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +36,11 @@ public class TestStateService {
     private final SubjectGroupAccessService accessService;
     private final DailyStreakService streakService;
     private final MetricsService metricsService;
+    private final TestRepository testRepository;
+    private final PermissionService permissionService;
+
+    /** Slack so a submit that was already in flight when the deadline hit is not rejected. */
+    private static final long LATE_ANSWER_GRACE_MS = 10_000;
 
     @Autowired
     public TestStateService(
@@ -37,8 +49,12 @@ public class TestStateService {
             TestStateRepository testStateRepository,
             SubjectGroupAccessService accessService,
             DailyStreakService streakService,
-            MetricsService metricsService
+            MetricsService metricsService,
+            TestRepository testRepository,
+            PermissionService permissionService
     ) {
+        this.testRepository = testRepository;
+        this.permissionService = permissionService;
         this.questionStateService = questionStateService;
         this.testStateFactory = testStateFactory;
         this.testStateRepository = testStateRepository;
@@ -51,12 +67,93 @@ public class TestStateService {
         if (!accessService.hasAccessToTest(testId, user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
+        Test test = testRepository.findById(testId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Test not found: " + testId));
+        if (test.isScheduledExam()) {
+            return createScheduledExamState(test, user);
+        }
         TestState testState = testStateFactory.createTestState(testId, testStateRequest, user);
         testState.setUser(user);
         metricsService.applyWeightedShuffle(testState, user);
         testStateRepository.findFirstByTest_IdAndUser_Id(testId, user.getId())
                 .ifPresent(testStateRepository::delete);
         return testStateRepository.save(testState);
+    }
+
+    /**
+     * A scheduled exam is configured entirely by its Test (counts, passing %, time limit); the
+     * student only starts it, and only once, only inside the window.
+     */
+    private TestState createScheduledExamState(Test test, User user) {
+        Instant now = Instant.now();
+        if (test.getStartAt() == null || test.getWindowEnd() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This exam has no schedule.");
+        }
+        if (now.isBefore(test.getStartAt())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "The exam has not started yet.");
+        }
+        if (!now.isBefore(test.getWindowEnd())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "The exam window has closed.");
+        }
+        if (testStateRepository.findFirstByTest_IdAndUser_Id(test.getId(), user.getId()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You have already taken this exam.");
+        }
+        long remainingMs = Duration.between(now, test.getWindowEnd()).toMillis();
+        long limitMs = Math.min(test.getTimeLimit(), remainingMs);
+        TestStateRequest request = TestStateRequest.builder()
+                .closedQuestionsCount(test.getClosedQuestionsCount())
+                .openQuestionsCount(test.getOpenQuestionsCount())
+                .statementQuestionsCount(Integer.MAX_VALUE)
+                .passingPercentage(test.getPassingPercentage())
+                .mode(TestModeDto.EXAM)
+                .displayType(TestDisplayTypeDto.ONE_BY_ONE)
+                .timeLimitEnabled(true)
+                .timeLimitMs(limitMs)
+                .build();
+        TestState state = testStateFactory.createTestState(test.getId(), request, user);
+        state.setUser(user);
+        return testStateRepository.save(state);
+    }
+
+    /** The attempt owner, or staff allowed to grade this test. */
+    public TestState findTestStateForOwnerOrGrader(UUID stateId, User user) {
+        TestState state = testStateRepository.findById(stateId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Test state not found: " + stateId));
+        boolean owner = state.getUser() != null && state.getUser().getId().equals(user.getId());
+        if (!owner && !canGrade(user, state.getTest().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        return state;
+    }
+
+    public boolean canGrade(User user, UUID testId) {
+        return permissionService.hasTestPermission(user, testId, Permission.TESTS_WRITE);
+    }
+
+    /**
+     * Guard for a student saving an answer: they must own the attempt, the question must belong to
+     * it, and for a scheduled exam the attempt must still be running (staff grade afterwards).
+     */
+    public void assertCanAnswer(UUID testStateId, UUID questionStateId, User user) {
+        TestState state = findTestState(testStateId, user.getId());
+        if (state.getQuestions().stream().noneMatch(q -> q.getId().equals(questionStateId))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Question not part of this attempt");
+        }
+        if (state.getTest().isScheduledExam()) {
+            boolean overtime = state.isTimeLimitEnabled() && state.getTimeLimitMs() > 0
+                    && System.currentTimeMillis() - state.getStartTime() > state.getTimeLimitMs() + LATE_ANSWER_GRACE_MS;
+            if (state.getExecutionState() != TestExecutionState.IN_PROGRESS || overtime) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "The exam is over.");
+            }
+        }
+    }
+
+    /** Reading answers: the owner, or staff who can grade, never another student. */
+    public void assertCanReadAnswers(UUID testStateId, UUID questionStateId, User user) {
+        TestState state = findTestStateForOwnerOrGrader(testStateId, user);
+        if (state.getQuestions().stream().noneMatch(q -> q.getId().equals(questionStateId))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Question not part of this attempt");
+        }
     }
 
     public TestState findTestState(UUID stateId, UUID userId) {
@@ -80,6 +177,10 @@ public class TestStateService {
         }
         TestState testState = testStateOptional.get();
         TestExecutionState executionState = testState.getExecutionState();
+        boolean scheduled = testState.getTest().isScheduledExam();
+        if (scheduled && executionState != TestExecutionState.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A scheduled exam can only be taken once.");
+        }
         if (TestExecutionState.getNext(executionState) == TestExecutionState.NOT_STARTED) {
             testStateFactory.resetTestState(testState);
         }
@@ -98,7 +199,13 @@ public class TestStateService {
                         q.setScore(0.0);
                     });
             testState.setCurrentQuestionIndex(0);
-            testState.setExecutionState(TestExecutionState.IN_REVIEW);
+            if (scheduled) {
+                discardSelfAssignedManualScores(testState);
+                testState.setExecutionState(TestExecutionState.FINISHED);
+                testState.setSubmittedAt(System.currentTimeMillis());
+            } else {
+                testState.setExecutionState(TestExecutionState.IN_REVIEW);
+            }
             testStateRepository.save(testState);
             return;
         }
@@ -163,7 +270,14 @@ public class TestStateService {
                         });
 
                 testState.setCurrentQuestionIndex(0);
-                if (testState.getExecutionState() == TestExecutionState.IN_PROGRESS) {
+                if (scheduled) {
+                    discardSelfAssignedManualScores(testState);
+                    testState.setExecutionState(TestExecutionState.FINISHED);
+                    testState.setSubmittedAt(System.currentTimeMillis());
+                    if (testState.getUser() != null) {
+                        streakService.recordActivity(testState.getUser());
+                    }
+                } else if (testState.getExecutionState() == TestExecutionState.IN_PROGRESS) {
                     testState.setExecutionState(TestExecutionState.IN_REVIEW);
                 } else {
                     testState.setExecutionState(TestExecutionState.FINISHED);
@@ -177,6 +291,20 @@ public class TestStateService {
 
 
         testStateRepository.save(testState);
+    }
+
+    /**
+     * The answer endpoint accepts a client-supplied score for manual open questions (that is how
+     * students self-grade in a standard exam). In a scheduled exam only staff may score them, so
+     * anything not yet graded by staff starts at zero.
+     */
+    private void discardSelfAssignedManualScores(TestState testState) {
+        testState.getQuestions().stream()
+                .filter(q -> ExamSupport.isManual(q) && !ExamSupport.isGraded(q))
+                .forEach(q -> {
+                    q.setScore(0.0);
+                    q.setWasCorrectAnswer(false);
+                });
     }
 
     /**
