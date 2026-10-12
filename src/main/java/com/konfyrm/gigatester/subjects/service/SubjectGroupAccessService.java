@@ -162,6 +162,16 @@ public class SubjectGroupAccessService {
         return false;
     }
 
+    public boolean hasAccessToCodingTask(UUID taskId, User user) {
+        if (permissionService.isStaff(user)) return true;
+        for (Subject subject : subjectRepository.findByCodingTasks_Id(taskId)) {
+            for (SubjectGroup group : groupRepository.findByTests_Id(subject.getId())) {
+                if (hasAccess(group.getId(), user)) return true;
+            }
+        }
+        return false;
+    }
+
     public boolean hasAccessToGraph(UUID graphId, User user) {
         if (permissionService.isStaff(user)) return true;
         List<Subject> subjects = subjectRepository.findByGraphs_Id(graphId);

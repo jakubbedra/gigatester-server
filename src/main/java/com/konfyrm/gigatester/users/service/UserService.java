@@ -43,6 +43,7 @@ public class UserService implements UserDetailsService {
     private final CommentRepository commentRepository;
     private final CrosswordStateRepository crosswordStateRepository;
     private final com.konfyrm.gigatester.graphs.repository.GraphSessionRepository graphSessionRepository;
+    private final com.konfyrm.gigatester.coding.repository.CodingSubmissionRepository codingSubmissionRepository;
     private final TestStateRepository testStateRepository;
     private final UserTestStatRepository userTestStatRepository;
     private final UserQuestionStatRepository userQuestionStatRepository;
@@ -139,6 +140,7 @@ public class UserService implements UserDetailsService {
         // Delete game states
         crosswordStateRepository.deleteByUser_Id(id);
         graphSessionRepository.deleteByUser_Id(id);
+        codingSubmissionRepository.deleteByUser_Id(id);
         testStateRepository.deleteByUser_Id(id);
         // Delete the user
         userRepository.delete(user);

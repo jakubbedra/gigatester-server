@@ -24,4 +24,7 @@ public class SubjectRequest {
 
     private List<UUID> graphs;
 
+    /** Null means "leave unchanged". */
+    private List<UUID> codingTasks;
+
 }

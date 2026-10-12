@@ -1,5 +1,6 @@
 package com.konfyrm.gigatester.subjects.domain.entity;
 
+import com.konfyrm.gigatester.coding.domain.entity.CodingTask;
 import com.konfyrm.gigatester.comments.domain.entity.Comment;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.graphs.domain.entity.Graph;
@@ -47,6 +48,13 @@ public class Subject {
         inverseJoinColumns = @JoinColumn(name = "graph_id"))
     @Builder.Default
     private List<Graph> graphs = new java.util.ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(name = "subjects_coding_tasks",
+        joinColumns = @JoinColumn(name = "subject_id"),
+        inverseJoinColumns = @JoinColumn(name = "coding_task_id"))
+    @Builder.Default
+    private List<CodingTask> codingTasks = new java.util.ArrayList<>();
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments;

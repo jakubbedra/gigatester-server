@@ -28,6 +28,8 @@ public class SubjectResponse {
 
     private List<UUID> graphs;
 
+    private List<UUID> codingTasks;
+
     private List<CommentResponse> comments;
 
     private List<UserResponse> authors;

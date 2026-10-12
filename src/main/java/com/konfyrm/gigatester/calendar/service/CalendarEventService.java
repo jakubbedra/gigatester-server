@@ -12,6 +12,8 @@ import com.konfyrm.gigatester.calendar.repository.CalendarEventRepository;
 import com.konfyrm.gigatester.calendar.repository.CalendarGroupMemberRepository;
 import com.konfyrm.gigatester.calendar.repository.CalendarGroupRepository;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
+import com.konfyrm.gigatester.coding.domain.entity.CodingTask;
+import com.konfyrm.gigatester.coding.repository.CodingTaskRepository;
 import com.konfyrm.gigatester.graphs.repository.GraphRepository;
 import com.konfyrm.gigatester.security.domain.Permission;
 import com.konfyrm.gigatester.security.service.PermissionService;
@@ -45,6 +47,7 @@ public class CalendarEventService {
     private final TestRepository testRepository;
     private final CrosswordRepository crosswordRepository;
     private final GraphRepository graphRepository;
+    private final CodingTaskRepository codingTaskRepository;
     private final PermissionService permissionService;
     private final CalendarGroupService calendarGroupService;
     private final SubjectGroupAccessService accessService;
@@ -58,12 +61,14 @@ public class CalendarEventService {
             TestRepository testRepository,
             CrosswordRepository crosswordRepository,
             GraphRepository graphRepository,
+            CodingTaskRepository codingTaskRepository,
             PermissionService permissionService,
             CalendarGroupService calendarGroupService,
             SubjectGroupAccessService accessService,
             SubjectRepository subjectRepository,
             SubjectGroupRepository subjectGroupRepository
     ) {
+        this.codingTaskRepository = codingTaskRepository;
         this.accessService = accessService;
         this.subjectRepository = subjectRepository;
         this.subjectGroupRepository = subjectGroupRepository;
@@ -91,6 +96,35 @@ public class CalendarEventService {
      */
     private List<CalendarEventResponse> examEvents(User user, LocalDateTime from, LocalDateTime to) {
         boolean staff = permissionService.isStaff(user);
+        List<CalendarEventResponse> events = new ArrayList<>(scheduledTestEvents(user, from, to, staff));
+        for (CodingTask task : codingTaskRepository.findByStartAtIsNotNull()) {
+            if (!task.isScheduled()) continue;
+            boolean visible = staff
+                    ? permissionService.hasCodingTaskPermission(user, task.getId(), Permission.CODING_WRITE)
+                    : accessService.hasAccessToCodingTask(task.getId(), user);
+            LocalDateTime start = LocalDateTime.ofInstant(task.getStartAt(), ZoneOffset.UTC);
+            if (!visible || (from != null && to != null && (start.isBefore(from) || start.isAfter(to)))) continue;
+            events.add(CalendarEventResponse.builder()
+                    .id(task.getId())
+                    .calendarGroupName("")
+                    .title(task.getName())
+                    .startTime(start)
+                    .endTime(LocalDateTime.ofInstant(task.getWindowEnd(), ZoneOffset.UTC))
+                    .links(List.of(CalendarEventLinkResponse.builder()
+                            .linkType(CalendarLinkType.CODING_TASK)
+                            .linkId(task.getId())
+                            .linkName(task.getName())
+                            .build()))
+                    .canManage(false)
+                    .exam(true)
+                    .startInstant(task.getStartAt())
+                    .endInstant(task.getWindowEnd())
+                    .build());
+        }
+        return events;
+    }
+
+    private List<CalendarEventResponse> scheduledTestEvents(User user, LocalDateTime from, LocalDateTime to, boolean staff) {
         return testRepository.findByType(TestType.SCHEDULED_EXAM).stream()
                 .filter(t -> t.getStartAt() != null && t.getWindowEnd() != null)
                 .filter(t -> staff
@@ -213,6 +247,7 @@ public class CalendarEventService {
             case TEST -> testRepository.existsById(linkId);
             case CROSSWORD -> crosswordRepository.existsById(linkId);
             case GRAPH -> graphRepository.existsById(linkId);
+            case CODING_TASK -> codingTaskRepository.existsById(linkId);
         };
         if (!exists) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Linked " + linkType + " not found: " + linkId);
@@ -270,6 +305,7 @@ public class CalendarEventService {
             case TEST -> testRepository.findById(linkId).map(com.konfyrm.gigatester.tests.domain.entity.Test::getName).orElse(null);
             case CROSSWORD -> crosswordRepository.findById(linkId).map(com.konfyrm.gigatester.crosswords.domain.entity.Crossword::getName).orElse(null);
             case GRAPH -> graphRepository.findById(linkId).map(com.konfyrm.gigatester.graphs.domain.entity.Graph::getName).orElse(null);
+            case CODING_TASK -> codingTaskRepository.findById(linkId).map(CodingTask::getName).orElse(null);
         };
     }
 
