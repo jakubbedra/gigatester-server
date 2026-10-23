@@ -7,6 +7,7 @@ import com.konfyrm.gigatester.coding.domain.entity.CodingSubmission;
 import com.konfyrm.gigatester.coding.domain.entity.CodingTask;
 import com.konfyrm.gigatester.coding.domain.entity.CodingTestCase;
 import com.konfyrm.gigatester.coding.repository.CodingSubmissionRepository;
+import com.konfyrm.gigatester.metrics.service.DailyStreakService;
 import com.konfyrm.gigatester.security.domain.Permission;
 import com.konfyrm.gigatester.security.service.PermissionService;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
@@ -31,11 +32,14 @@ public class CodingSubmissionService {
     private final CodingSubmissionRepository submissionRepository;
     private final SubjectGroupAccessService accessService;
     private final PermissionService permissionService;
+    private final DailyStreakService streakService;
 
     public CodingSubmissionService(CodingTaskService taskService,
                                    CodingSubmissionRepository submissionRepository,
                                    SubjectGroupAccessService accessService,
-                                   PermissionService permissionService) {
+                                   PermissionService permissionService,
+                                   DailyStreakService streakService) {
+        this.streakService = streakService;
         this.taskService = taskService;
         this.submissionRepository = submissionRepository;
         this.accessService = accessService;
@@ -162,6 +166,8 @@ public class CodingSubmissionService {
                 .score(score)
                 .submittedAt(Instant.now())
                 .build());
+
+        streakService.recordActivity(user);
 
         return CodingSubmissionResponse.builder()
                 .submissionId(saved.getId())

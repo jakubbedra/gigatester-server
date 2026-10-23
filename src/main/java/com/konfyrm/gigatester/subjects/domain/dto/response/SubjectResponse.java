@@ -30,6 +30,8 @@ public class SubjectResponse {
 
     private List<UUID> codingTasks;
 
+    private List<UUID> articles;
+
     private List<CommentResponse> comments;
 
     private List<UserResponse> authors;

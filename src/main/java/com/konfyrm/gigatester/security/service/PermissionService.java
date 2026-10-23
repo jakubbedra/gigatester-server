@@ -2,6 +2,8 @@ package com.konfyrm.gigatester.security.service;
 
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
+import com.konfyrm.gigatester.articles.domain.entity.Article;
+import com.konfyrm.gigatester.articles.repository.ArticleRepository;
 import com.konfyrm.gigatester.coding.domain.entity.CodingTask;
 import com.konfyrm.gigatester.coding.repository.CodingTaskRepository;
 import com.konfyrm.gigatester.graphs.domain.entity.Graph;
@@ -39,13 +41,16 @@ public class PermissionService {
     private final CrosswordRepository crosswordRepository;
     private final GraphRepository graphRepository;
     private final CodingTaskRepository codingTaskRepository;
+    private final ArticleRepository articleRepository;
 
     public PermissionService(SubjectRepository subjectRepository,
                               SubjectGroupRepository subjectGroupRepository,
                               TestRepository testRepository,
                               CrosswordRepository crosswordRepository,
                               GraphRepository graphRepository,
-                              CodingTaskRepository codingTaskRepository) {
+                              CodingTaskRepository codingTaskRepository,
+                              ArticleRepository articleRepository) {
+        this.articleRepository = articleRepository;
         this.graphRepository = graphRepository;
         this.codingTaskRepository = codingTaskRepository;
         this.subjectRepository = subjectRepository;
@@ -114,6 +119,18 @@ public class PermissionService {
         List<Subject> subjects = subjectRepository.findByGraphs_Id(graphId);
         if (subjects.isEmpty()) {
             return grantedByRole(user, permission) && createdByUser(graphRepository.findById(graphId).orElse(null), user);
+        }
+        return grantedByRole(user, permission)
+                && subjects.stream().anyMatch(s -> hasSubjectPermission(user, s.getId(), permission));
+    }
+
+    public boolean hasArticlePermission(User user, UUID articleId, Permission permission) {
+        if (isAdmin(user)) return true;
+        List<Subject> subjects = subjectRepository.findByArticles_Id(articleId);
+        if (subjects.isEmpty()) {
+            Article article = articleRepository.findById(articleId).orElse(null);
+            return grantedByRole(user, permission) && article != null && article.getCreatedBy() != null
+                    && user != null && article.getCreatedBy().getId().equals(user.getId());
         }
         return grantedByRole(user, permission)
                 && subjects.stream().anyMatch(s -> hasSubjectPermission(user, s.getId(), permission));

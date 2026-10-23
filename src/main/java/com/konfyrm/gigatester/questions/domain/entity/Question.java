@@ -46,6 +46,11 @@ public abstract class Question {
     private QuestionContent explanation;
 
     @Builder.Default
+    @ElementCollection
+    @CollectionTable(name = "question_article_refs", joinColumns = @JoinColumn(name = "question_id"))
+    private List<ArticleReference> articleRefs = new ArrayList<>();
+
+    @Builder.Default
     private Integer contentProportions = 1;
 
     @Builder.Default

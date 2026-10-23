@@ -3,6 +3,8 @@ package com.konfyrm.gigatester.subjects.domain.converter;
 import com.konfyrm.gigatester.comments.service.CommentService;
 import com.konfyrm.gigatester.crosswords.domain.entity.Crossword;
 import com.konfyrm.gigatester.crosswords.repository.CrosswordRepository;
+import com.konfyrm.gigatester.articles.domain.entity.Article;
+import com.konfyrm.gigatester.articles.repository.ArticleRepository;
 import com.konfyrm.gigatester.coding.domain.entity.CodingTask;
 import com.konfyrm.gigatester.coding.repository.CodingTaskRepository;
 import com.konfyrm.gigatester.graphs.domain.entity.Graph;
@@ -28,12 +30,14 @@ public class SubjectConverter {
     private final CrosswordRepository crosswordRepository;
     private final GraphRepository graphRepository;
     private final CodingTaskRepository codingTaskRepository;
+    private final ArticleRepository articleRepository;
     private final CommentService commentService;
 
     @Autowired
     public SubjectConverter(TestRepository testRepository, CrosswordRepository crosswordRepository,
                             GraphRepository graphRepository, CodingTaskRepository codingTaskRepository,
-                            CommentService commentService) {
+                            ArticleRepository articleRepository, CommentService commentService) {
+        this.articleRepository = articleRepository;
         this.codingTaskRepository = codingTaskRepository;
         this.testRepository = testRepository;
         this.crosswordRepository = crosswordRepository;
@@ -57,6 +61,11 @@ public class SubjectConverter {
                         .map(id -> codingTaskRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Coding task not found for id: " + id)))
                         .toList();
 
+        List<Article> articles = request.getArticles() == null ? null :
+                request.getArticles().stream()
+                        .map(id -> articleRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Article not found for id: " + id)))
+                        .toList();
+
         return Subject.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -67,6 +76,7 @@ public class SubjectConverter {
                 .crosswords(crosswords)
                 .graphs(graphs)
                 .codingTasks(codingTasks)
+                .articles(articles)
                 .build();
     }
 
@@ -85,6 +95,8 @@ public class SubjectConverter {
                         subject.getGraphs().stream().map(Graph::getId).toList())
                 .codingTasks(subject.getCodingTasks() == null ? List.of() :
                         subject.getCodingTasks().stream().map(CodingTask::getId).toList())
+                .articles(subject.getArticles() == null ? List.of() :
+                        subject.getArticles().stream().map(Article::getId).toList())
                 .comments(subject.getComments() == null ? List.of() :
                         subject.getComments().stream().map(c -> commentService.toResponse(c, currentUserId)).toList())
                 .authors(subject.getAuthors() == null ? List.of() :

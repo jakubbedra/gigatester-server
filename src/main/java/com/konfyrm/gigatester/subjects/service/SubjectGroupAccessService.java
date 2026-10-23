@@ -162,6 +162,16 @@ public class SubjectGroupAccessService {
         return false;
     }
 
+    public boolean hasAccessToArticle(UUID articleId, User user) {
+        if (permissionService.isStaff(user)) return true;
+        for (Subject subject : subjectRepository.findByArticles_Id(articleId)) {
+            for (SubjectGroup group : groupRepository.findByTests_Id(subject.getId())) {
+                if (hasAccess(group.getId(), user)) return true;
+            }
+        }
+        return false;
+    }
+
     public boolean hasAccessToCodingTask(UUID taskId, User user) {
         if (permissionService.isStaff(user)) return true;
         for (Subject subject : subjectRepository.findByCodingTasks_Id(taskId)) {

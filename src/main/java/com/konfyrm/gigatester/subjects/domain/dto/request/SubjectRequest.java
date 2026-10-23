@@ -27,4 +27,7 @@ public class SubjectRequest {
     /** Null means "leave unchanged". */
     private List<UUID> codingTasks;
 
+    /** Null means "leave unchanged". */
+    private List<UUID> articles;
+
 }

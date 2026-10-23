@@ -19,6 +19,21 @@ import java.util.UUID;
 @Service
 public class CommentService {
 
+    /** Longest comment or reply, in characters. The UI shows the same number under the box. */
+    public static final int MAX_COMMENT_LENGTH = 250;
+
+    private static String validated(String content) {
+        String text = content == null ? "" : content.trim();
+        if (text.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A comment cannot be empty.");
+        }
+        if (text.length() > MAX_COMMENT_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A comment can have at most " + MAX_COMMENT_LENGTH + " characters.");
+        }
+        return text;
+    }
+
+
     private final SubjectRepository subjectRepository;
     private final CommentRepository commentRepository;
     private final PermissionService permissionService;
@@ -33,7 +48,8 @@ public class CommentService {
     }
 
     @Transactional
-    public CommentResponse addComment(UUID subjectId, String content, User user) {
+    public CommentResponse addComment(UUID subjectId, String rawContent, User user) {
+        String content = validated(rawContent);
         Subject subject = subjectRepository.findById(subjectId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Comment comment = Comment.builder()
@@ -50,7 +66,8 @@ public class CommentService {
     }
 
     @Transactional
-    public CommentResponse addReply(UUID subjectId, UUID commentId, String content, User user) {
+    public CommentResponse addReply(UUID subjectId, UUID commentId, String rawContent, User user) {
+        String content = validated(rawContent);
         subjectRepository.findById(subjectId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Comment parent = commentRepository.findById(commentId)

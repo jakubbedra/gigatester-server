@@ -14,7 +14,9 @@ public enum Permission {
     GRAPHS_READ,
     GRAPHS_WRITE,
     CODING_READ,
-    CODING_WRITE;
+    CODING_WRITE,
+    ARTICLES_READ,
+    ARTICLES_WRITE;
 
     /**
      * WRITE implies READ for the same resource. SUBJECTS_WRITE additionally
@@ -31,6 +33,7 @@ public enum Permission {
             case CROSSWORDS_READ -> granted == CROSSWORDS_WRITE;
             case GRAPHS_READ -> granted == GRAPHS_WRITE;
             case CODING_READ -> granted == CODING_WRITE;
+            case ARTICLES_READ -> granted == ARTICLES_WRITE;
             default -> false;
         };
     }

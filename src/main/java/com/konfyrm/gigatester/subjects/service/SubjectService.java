@@ -45,6 +45,9 @@ public class SubjectService {
         existing.setTests(subject.getTests());
         existing.setCrosswords(subject.getCrosswords());
         existing.setGraphs(subject.getGraphs());
+        if (subject.getArticles() != null) {
+            existing.setArticles(subject.getArticles());
+        }
         if (subject.getCodingTasks() != null) {
             existing.setCodingTasks(subject.getCodingTasks());
         }

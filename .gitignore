@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Database backups (contain real data) ###
+/backups/
+
+### Local profile pointing at a copy of the production DB ###
+src/main/resources/application-copy.yaml

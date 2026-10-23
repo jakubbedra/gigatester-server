@@ -11,6 +11,7 @@ import com.konfyrm.gigatester.graphs.domain.entity.enums.GraphPlayMode;
 import com.konfyrm.gigatester.graphs.domain.json.GraphData;
 import com.konfyrm.gigatester.graphs.repository.GraphRepository;
 import com.konfyrm.gigatester.graphs.repository.GraphSessionRepository;
+import com.konfyrm.gigatester.metrics.service.DailyStreakService;
 import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.HttpStatus;
@@ -34,13 +35,16 @@ public class GraphSessionService {
     private final ObjectMapper objectMapper;
 
     private final SubjectGroupAccessService accessService;
+    private final DailyStreakService streakService;
 
     public GraphSessionService(
             GraphRepository graphRepository,
             GraphSessionRepository graphSessionRepository,
             ObjectMapper objectMapper,
-            SubjectGroupAccessService accessService
+            SubjectGroupAccessService accessService,
+            DailyStreakService streakService
     ) {
+        this.streakService = streakService;
         this.graphRepository = graphRepository;
         this.graphSessionRepository = graphSessionRepository;
         this.objectMapper = objectMapper;
@@ -103,8 +107,12 @@ public class GraphSessionService {
         solved.add(vertexId);
         session.setSolvedVertexIds(String.join(",", solved));
         boolean completed = (revealed.size() + solved.size()) >= guessableIds(data).size();
+        boolean justFinished = completed && !session.isCompleted();
         session.setCompleted(completed);
         graphSessionRepository.save(session);
+        if (justFinished) {
+            streakService.recordActivity(user);
+        }
 
         return GraphAnswerResponse.builder().correct(true).vertexId(vertexId).label(vertex.label).completed(completed).build();
     }

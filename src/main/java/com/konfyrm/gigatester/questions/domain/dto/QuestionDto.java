@@ -49,6 +49,9 @@ public class QuestionDto {
     private QuestionContent explanation;
 
     @Nullable
+    private List<ArticleReferenceDto> articleRefs;
+
+    @Nullable
     private Integer contentProportions;
 
     @Nullable

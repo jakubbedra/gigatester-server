@@ -19,6 +19,8 @@ public interface SubjectRepository extends JpaRepository<Subject, UUID> {
 
     List<Subject> findByCodingTasks_Id(UUID taskId);
 
+    List<Subject> findByArticles_Id(UUID articleId);
+
     @Modifying
     @Query(value = "DELETE FROM subject_authors WHERE user_id = :userId", nativeQuery = true)
     void removeUserFromAllAuthors(@Param("userId") UUID userId);
