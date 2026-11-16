@@ -15,12 +15,14 @@ public class QuestionContentConverter implements EntityConverter<QuestionContent
 
     private static final Map<QuestionContentType, ContentType> DTO_TO_ENTITY_TYPE = Map.of(
             QuestionContentType.TEXT, ContentType.TEXT,
-            QuestionContentType.HTML, ContentType.HTML
+            QuestionContentType.HTML, ContentType.HTML,
+            QuestionContentType.CODE_SNIPPET, ContentType.CODE_SNIPPET
     );
 
     private static final Map<ContentType, QuestionContentType> ENTITY_TO_DTO_TYPE = Map.of(
             ContentType.TEXT, QuestionContentType.TEXT,
-            ContentType.HTML, QuestionContentType.HTML
+            ContentType.HTML, QuestionContentType.HTML,
+            ContentType.CODE_SNIPPET, QuestionContentType.CODE_SNIPPET
     );
 
     @Nonnull
