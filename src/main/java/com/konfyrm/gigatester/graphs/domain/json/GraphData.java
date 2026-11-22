@@ -17,6 +17,14 @@ public class GraphData {
     public Boolean showVertices;
     /** "straight" or "curved"; null on older graphs, treated as straight. */
     public String edgeStyle;
+    /** Optional background picture, drawn fitted inside the 1400x800 canvas the vertices are positioned on. */
+    public ImageInfo image;
+
+    public static class ImageInfo {
+        public String url;
+        public double width;
+        public double height;
+    }
 
     public static class Vertex {
         public String id;

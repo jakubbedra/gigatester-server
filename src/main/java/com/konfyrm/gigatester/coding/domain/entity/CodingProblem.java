@@ -35,6 +35,16 @@ public class CodingProblem {
     @Column(columnDefinition = "text")
     private String starterCode;
 
+    /** Optional read-only code shown next to the student's editor; it is joined with the student's code when run. */
+    @Lob
+    @JdbcTypeCode(org.hibernate.type.SqlTypes.LONGVARCHAR)
+    @Column(columnDefinition = "text")
+    private String lockedCode;
+
+    /** True: the locked code comes before the student's code; false (default): after it. Null on old rows means false. */
+    @Builder.Default
+    private Boolean lockedFirst = false;
+
     @Builder.Default
     private double points = 10;
 

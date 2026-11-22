@@ -19,6 +19,8 @@ public class CodingTaskRequest {
     /** Both null = always available. */
     private Instant startAt;
     private Instant windowEnd;
+    /** Null means true. */
+    private Boolean submitEnabled;
     private List<ProblemDto> problems;
 
     @Getter
@@ -32,6 +34,8 @@ public class CodingTaskRequest {
         private String title;
         private String description;
         private String starterCode;
+        private String lockedCode;
+        private boolean lockedFirst;
         private double points;
         private long timeLimitMs;
         private List<TestCaseDto> tests;

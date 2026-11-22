@@ -22,6 +22,8 @@ public class CodingTaskPlayResponse {
     private String description;
     private Instant startAt;
     private Instant windowEnd;
+    /** False when the author turned submitting off: students only practise. */
+    private boolean submitEnabled;
     /** open | notStarted | closed */
     private String phase;
     private double maxScore;
@@ -41,12 +43,17 @@ public class CodingTaskPlayResponse {
         private String title;
         private String description;
         private String starterCode;
+        /** Read-only code the student sees but cannot change; it is combined with their code when run. */
+        private String lockedCode;
+        private boolean lockedFirst;
         private double points;
         private long timeLimitMs;
         private List<TestCase> tests;
         private Double bestScore;
         private Integer bestPassed;
         private int attempts;
+        /** The code of the latest submission, so a submitted problem shows what was handed in. */
+        private String lastCode;
     }
 
     @Getter

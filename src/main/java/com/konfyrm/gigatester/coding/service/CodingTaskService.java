@@ -105,6 +105,7 @@ public class CodingTaskService {
         task.setDescription(request.getDescription());
         task.setStartAt(request.getStartAt());
         task.setWindowEnd(request.getWindowEnd());
+        task.setSubmitEnabled(request.getSubmitEnabled() == null || request.getSubmitEnabled());
 
         Map<UUID, CodingProblem> existing = task.getProblems().stream()
                 .collect(Collectors.toMap(CodingProblem::getId, Function.identity()));
@@ -122,6 +123,8 @@ public class CodingTaskService {
             problem.setTitle(dto.getTitle() == null || dto.getTitle().isBlank() ? "Problem " + n : dto.getTitle().trim());
             problem.setDescription(dto.getDescription());
             problem.setStarterCode(dto.getStarterCode());
+            problem.setLockedCode(dto.getLockedCode() == null || dto.getLockedCode().isBlank() ? null : dto.getLockedCode());
+            problem.setLockedFirst(dto.isLockedFirst());
             problem.setPoints(dto.getPoints());
             problem.setTimeLimitMs(dto.getTimeLimitMs() > 0 ? dto.getTimeLimitMs() : 5000);
             List<CodingTestCase> tests = new ArrayList<>();
@@ -152,11 +155,14 @@ public class CodingTaskService {
                 .description(task.getDescription())
                 .startAt(task.getStartAt())
                 .windowEnd(task.getWindowEnd())
+                .submitEnabled(task.isSubmitAllowed())
                 .problems(task.getProblems().stream().map(p -> CodingTaskResponse.Problem.builder()
                         .id(p.getId())
                         .title(p.getTitle())
                         .description(p.getDescription())
                         .starterCode(p.getStarterCode())
+                        .lockedCode(p.getLockedCode())
+                        .lockedFirst(Boolean.TRUE.equals(p.getLockedFirst()))
                         .points(p.getPoints())
                         .timeLimitMs(p.getTimeLimitMs())
                         .tests(p.getTests().stream().map(t -> CodingTaskResponse.TestCase.builder()

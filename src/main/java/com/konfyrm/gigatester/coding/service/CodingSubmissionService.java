@@ -101,6 +101,8 @@ public class CodingSubmissionService {
                     .title(p.getTitle())
                     .description(p.getDescription())
                     .starterCode(p.getStarterCode())
+                    .lockedCode(p.getLockedCode())
+                    .lockedFirst(Boolean.TRUE.equals(p.getLockedFirst()))
                     .points(p.getPoints())
                     .timeLimitMs(p.getTimeLimitMs())
                     .tests(p.getTests().stream().map(t -> CodingTaskPlayResponse.TestCase.builder()
@@ -111,6 +113,8 @@ public class CodingSubmissionService {
                     .bestScore(best == null ? null : best.getScore())
                     .bestPassed(best == null ? null : best.getPassedCount())
                     .attempts(list.size())
+                    .lastCode(list.stream().max(java.util.Comparator.comparing(CodingSubmission::getSubmittedAt))
+                            .map(CodingSubmission::getCode).orElse(null))
                     .build());
         }
 
@@ -120,6 +124,7 @@ public class CodingSubmissionService {
                 .description(showContent ? task.getDescription() : null)
                 .startAt(task.getStartAt())
                 .windowEnd(task.getWindowEnd())
+                .submitEnabled(task.isSubmitAllowed())
                 .phase(phase)
                 .maxScore(maxScore(task))
                 .totalScore(Math.round(total * 100.0) / 100.0)
@@ -136,6 +141,9 @@ public class CodingSubmissionService {
         if (!canGrade(user, taskId) && !phase(task).equals("open")) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This task is not open for submissions.");
         }
+        if (!canGrade(user, taskId) && !task.isSubmitAllowed()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Submitting is turned off for this task.");
+        }
         List<CodingSubmission> before = submissionRepository.findByTask_IdAndUser_Id(taskId, user.getId());
         if (!canGrade(user, taskId) && isCompleted(task, before)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "You have already finished this test.");
@@ -143,6 +151,10 @@ public class CodingSubmissionService {
         CodingProblem problem = task.getProblems().stream()
                 .filter(p -> p.getId().equals(problemId)).findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Problem not found"));
+        // A submission is final: the code of a submitted problem can no longer be changed or resubmitted.
+        if (!canGrade(user, taskId) && before.stream().anyMatch(s -> s.getProblem() != null && s.getProblem().getId().equals(problemId))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You have already submitted this problem.");
+        }
         List<CodingTestCase> tests = problem.getTests();
         if (tests.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This problem has no tests.");

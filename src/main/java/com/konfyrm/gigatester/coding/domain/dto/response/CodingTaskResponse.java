@@ -19,6 +19,7 @@ public class CodingTaskResponse {
     private String description;
     private Instant startAt;
     private Instant windowEnd;
+    private boolean submitEnabled;
     private List<Problem> problems;
 
     @Getter
@@ -31,6 +32,8 @@ public class CodingTaskResponse {
         private String title;
         private String description;
         private String starterCode;
+        private String lockedCode;
+        private boolean lockedFirst;
         private double points;
         private long timeLimitMs;
         private List<TestCase> tests;

@@ -4,12 +4,27 @@ import com.konfyrm.gigatester.graphs.domain.dto.request.GraphRequest;
 import com.konfyrm.gigatester.graphs.domain.dto.response.GraphResponse;
 import com.konfyrm.gigatester.graphs.domain.dto.response.GraphSummaryResponse;
 import com.konfyrm.gigatester.graphs.domain.entity.Graph;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
 public class GraphConverter {
+
+    private final ObjectMapper objectMapper;
+
+    public GraphConverter(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    private boolean hasImage(Graph graph) {
+        try {
+            return graph.getGraphJson() != null && objectMapper.readTree(graph.getGraphJson()).hasNonNull("image");
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     public Graph toEntity(GraphRequest request) {
         return Graph.builder()
@@ -28,7 +43,7 @@ public class GraphConverter {
 
     public List<GraphSummaryResponse> toSummaryResponses(List<Graph> graphs) {
         return graphs.stream()
-                .map(g -> GraphSummaryResponse.builder().id(g.getId()).name(g.getName()).build())
+                .map(g -> GraphSummaryResponse.builder().id(g.getId()).name(g.getName()).image(hasImage(g)).build())
                 .toList();
     }
 

@@ -12,4 +12,6 @@ import java.util.UUID;
 public class GraphSummaryResponse {
     private UUID id;
     private String name;
+    /** True for an image-labelling activity. */
+    private boolean image;
 }

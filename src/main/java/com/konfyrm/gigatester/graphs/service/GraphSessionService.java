@@ -156,6 +156,9 @@ public class GraphSessionService {
                 .showVertices(data.showVertices == null || data.showVertices)
                 .edgeStyle("curved".equals(data.edgeStyle) ? "curved" : "straight")
                 .mode(session.effectiveMode())
+                .imageUrl(data.image == null ? null : data.image.url)
+                .imageWidth(data.image == null ? null : data.image.width)
+                .imageHeight(data.image == null ? null : data.image.height)
                 .bank(session.effectiveMode() == GraphPlayMode.DRAG_DROP ? labelBank(session, data, revealed, solved) : List.of())
                 .build();
     }

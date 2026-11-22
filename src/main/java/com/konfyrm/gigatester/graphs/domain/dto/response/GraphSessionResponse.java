@@ -27,6 +27,10 @@ public class GraphSessionResponse {
     private boolean showVertices;
     private String edgeStyle;
     private GraphPlayMode mode;
+    /** Image-labelling activity: the picture and its pixel size; null for an ordinary graph. */
+    private String imageUrl;
+    private Double imageWidth;
+    private Double imageHeight;
     /** DRAG_DROP only: labels still to be placed, in a stable shuffled order. Not tied to vertices. */
     private List<String> bank;
 }

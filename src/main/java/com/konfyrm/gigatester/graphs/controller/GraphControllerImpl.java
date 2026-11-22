@@ -10,6 +10,9 @@ import com.konfyrm.gigatester.subjects.service.SubjectGroupAccessService;
 import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 import java.util.UUID;
 
@@ -37,6 +40,17 @@ public class GraphControllerImpl implements GraphController {
         entity.setCreatedBy(user);
         Graph saved = graphService.addGraph(entity);
         return ResponseEntity.accepted().body(saved.getId());
+    }
+
+    @Override
+    public ResponseEntity<?> uploadImage(MultipartFile file, User user) {
+        permissionService.require(permissionService.canCreate(user, Permission.GRAPHS_WRITE)
+                || permissionService.isStaff(user));
+        try {
+            return ResponseEntity.accepted().body(graphService.uploadImage(file));
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body("Failed to upload image: " + e.getMessage());
+        }
     }
 
     @Override

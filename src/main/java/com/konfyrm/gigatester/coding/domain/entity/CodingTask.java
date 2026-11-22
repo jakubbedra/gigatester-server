@@ -52,6 +52,14 @@ public class CodingTask {
 
     private Instant windowEnd;
 
+    /** When false, students cannot submit at all (they can still write and run code). Null on old rows means true. */
+    @Builder.Default
+    private Boolean submitEnabled = true;
+
+    public boolean isSubmitAllowed() {
+        return submitEnabled == null || submitEnabled;
+    }
+
     public boolean isScheduled() {
         return startAt != null && windowEnd != null;
     }

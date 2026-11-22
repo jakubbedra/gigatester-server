@@ -5,6 +5,7 @@ import com.konfyrm.gigatester.users.domain.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -12,6 +13,9 @@ public interface GraphController {
 
     @PostMapping("api/v1/graphs")
     ResponseEntity<?> addGraph(@RequestBody GraphRequest request, @AuthenticationPrincipal User user);
+
+    @PostMapping("api/v1/graphs/images")
+    ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file, @AuthenticationPrincipal User user);
 
     @GetMapping("api/v1/graphs")
     ResponseEntity<?> getGraphs(@AuthenticationPrincipal User user);
